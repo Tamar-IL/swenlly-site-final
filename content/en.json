@@ -1,0 +1,23 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "services": "Systems",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "cta": "Book a call",
+    "login": "Log in"
+  },
+  "home": {
+    "hero": {
+      "chip": "Automation · AI agents · Smart systems",
+      "h1": "Let technology work for you.",
+      "lead": "You don't buy a system — you buy peace of mind. We build the systems that do the repetitive work, so you're free for what actually moves the business.",
+      "ctaPrimary": "Start with a call →",
+      "ctaSecondary": "What we built"
+    }
+  },
+  "footer": {
+    "note": "Price ranges by complexity · exact quote after scoping"
+  }
+}
