@@ -151,6 +151,20 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 /* testimonial card — avatar straddles the top edge, content centred, stars last */
 .tcgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
 @media(max-width:880px){.tcgrid{grid-template-columns:1fr;gap:52px}}
+/* carousel nav under the row */
+.tcnav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:30px}
+.tcnav button{width:34px;height:34px;flex:none;display:grid;place-items:center;
+ border:1px solid var(--line);border-radius:50%;background:transparent;color:var(--tx3);
+ font-size:15px;line-height:1;cursor:pointer;transition:border-color .2s,color .2s;font-family:var(--sans)}
+.tcnav button:hover:not(:disabled){border-color:var(--line2);color:var(--tx)}
+.tcnav button:disabled{opacity:.35;cursor:default}
+/* the glyph points left by default (RTL "next"); mirror it per button and per direction */
+.tcnav .prev .ico{transform:scaleX(-1)}
+[dir=ltr] .tcnav .ico{transform:scaleX(-1)}
+[dir=ltr] .tcnav .prev .ico{transform:none}
+.tcdots{display:flex;gap:7px}
+.tcdots span{width:6px;height:6px;border-radius:50%;background:var(--line2);transition:background .2s}
+.tcdots span.on{background:var(--tx3)}
 .tc{position:relative;overflow:visible;align-items:center;text-align:center;padding:58px 24px 26px;background:transparent;border-color:transparent}
 .tc.hoverable:hover{border-color:transparent}
 /* border lives on a pseudo-element so it can be notched open around the avatar */
@@ -163,6 +177,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
  width:68px;height:68px;border-radius:50%;overflow:hidden;
  border:1px solid var(--line2);background:var(--card2)}
 .tc .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.tc .avatar.logo{background:#fff}
+.tc .avatar.logo img{object-fit:contain;padding:9px}
 .tc .n{color:var(--tx);font-weight:700;font-size:15px;font-family:var(--sans);line-height:1.3}
 .tc .r{color:var(--tx3);font-size:12px;font-family:var(--sans);margin-top:5px}
 .tc blockquote{margin:16px 0 22px;font-size:14px;line-height:1.75;color:var(--tx2);font-family:var(--sans)}
@@ -270,6 +286,10 @@ footer img.logo{height:28px;opacity:.9}
 .svctier:hover{border-color:var(--line2)}
 .svctier .tn{color:var(--tx);font-weight:700;font-size:15px;font-family:var(--sans);margin-bottom:9px}
 .svctier p{color:var(--tx3);font-size:13px;line-height:1.7;font-family:var(--sans)}
+
+/* real client build showcase */
+.svcvideo{display:block;width:100%;aspect-ratio:16/9;background:#000;
+ border:1px solid var(--line);border-radius:14px}
 
 /* chat window (agent) */
 .chatwin{display:flex;flex-direction:column;gap:12px}

@@ -60,6 +60,22 @@ export default async function ServicesPage({
               <ServiceMock type={item.mock} />
             </div>
 
+            {/* real client build — the flagship service shows an actual system we delivered */}
+            {item.id === "systems" && (
+              <div className="svcwhat">
+                <div className="svclabel">מוצר שבנינו ללקוח</div>
+                <video
+                  className="svcvideo"
+                  src="/media/portfolio-systems-16x9.mp4"
+                  controls
+                  playsInline
+                  muted
+                  loop
+                  preload="metadata"
+                />
+              </div>
+            )}
+
             {tiers.length > 0 && (
               <div className="svcwhat">
                 <div className="svclabel">מה זה כולל</div>

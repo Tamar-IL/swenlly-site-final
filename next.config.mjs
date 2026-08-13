@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Emits .next/standalone with a self-contained server.js — keeps the Docker image small.
+  output: "standalone",
   images: {
     formats: ["image/avif", "image/webp"],
   },

@@ -21,12 +21,19 @@ export default async function HomePage({
   return (
     <div className="wrap">
       {/* HERO TITLE — tagline section */}
-      <div className="first reveal" style={{ marginTop: 34, textAlign: "center", marginBottom: 40, padding: "40px 32px" }}>
-        <p style={{ fontSize: "clamp(36px, 4.6vw, 56px)", lineHeight: 1.2, color: "var(--tx)", fontWeight: 700, fontFamily: "var(--disp)", maxWidth: "52ch", margin: "0 auto", letterSpacing: "-0.02em" }}>
+      <div className="first reveal" style={{ position: "relative", marginTop: 48, textAlign: "center", marginBottom: 56, padding: "72px 40px" }}>
+        {/* brand mark sits behind the tagline as a watermark */}
+        <img
+          src="/brand/swenlly-icon-automation.png"
+          alt=""
+          aria-hidden="true"
+          style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", height: "clamp(220px, 26vw, 340px)", width: "auto", opacity: 0.18, pointerEvents: "none", userSelect: "none" }}
+        />
+        <p style={{ position: "relative", fontSize: "clamp(36px, 4.6vw, 56px)", lineHeight: 1.45, color: "var(--tx)", fontWeight: 700, fontFamily: "var(--disp)", maxWidth: "52ch", margin: "0 auto", letterSpacing: "-0.02em" }}>
           סוונלי .<br />
           מערכות חכמות, מערכות CRM, <br />
           אוטומציות וטפסים. <br />
-          <span style={{ fontSize: "0.5em", color: "var(--tx3)" }}>הכל בהתאמה אישית.</span>
+          <span style={{ fontSize: "0.5em", color: "var(--tx3)", display: "inline-block", marginTop: 18, lineHeight: 1.6 }}>הכל בהתאמה אישית.</span>
         </p>
       </div>
 

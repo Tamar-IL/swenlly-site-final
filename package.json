@@ -15,7 +15,8 @@
     "zod": "^3.24.1",
     "@anthropic-ai/sdk": "^0.39.0",
     "resend": "^4.1.2",
-    "airtable": "^0.12.2"
+    "airtable": "^0.12.2",
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

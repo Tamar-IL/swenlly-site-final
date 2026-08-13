@@ -1,0 +1,46 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_TURNSTILE_SITEKEY: ${NEXT_PUBLIC_TURNSTILE_SITEKEY:-}
+    image: swenlly-site:latest
+    container_name: swenlly-web
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3000"
+    volumes:
+      # Videos/large assets live on the host, not in the image.
+      - ./public/media:/app/public/media:ro
+    networks: [swenlly]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: swenlly-nginx
+    restart: unless-stopped
+    depends_on: [web]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/active:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    networks: [swenlly]
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: swenlly-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # Renews every 12h; nginx picks up new certs on its own reload (see scripts/renew.sh).
+    entrypoint: >
+      sh -c "trap exit TERM;
+      while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+    restart: unless-stopped
+    networks: [swenlly]
+
+networks:
+  swenlly:

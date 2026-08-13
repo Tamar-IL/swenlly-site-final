@@ -12,3 +12,14 @@ yarn-error.log*
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# deploy state (server-side, not source)
+/nginx/active/*
+!/nginx/active/.gitkeep
+/certbot
+
+# large media — rsynced to the server, bind-mounted into the container
+/public/media
+
+# old video cuts kept around locally; GitHub warns past 50MB and they bloat every clone
+*.PREVIOUS_*.mp4
