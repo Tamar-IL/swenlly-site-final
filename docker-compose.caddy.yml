@@ -1,0 +1,28 @@
+# Use this INSTEAD of docker-compose.yml when the server already has Caddy on 80/443.
+# Runs only the Next.js container and joins it to Caddy's network, so Caddy can
+# reverse-proxy swenlly.com to it and issue the certificate automatically.
+#
+#   docker compose -f docker-compose.caddy.yml up -d --build
+#
+# If the network name below is wrong, find the right one with:
+#   docker inspect whatsapp-web-client-caddy-1 -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}'
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_TURNSTILE_SITEKEY: ${NEXT_PUBLIC_TURNSTILE_SITEKEY:-}
+    image: swenlly-site:latest
+    container_name: swenlly-web
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3000"
+    networks:
+      - caddy
+
+networks:
+  caddy:
+    external: true
+    name: whatsapp-web-client_default
