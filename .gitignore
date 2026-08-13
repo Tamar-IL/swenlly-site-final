@@ -23,3 +23,6 @@ next-env.d.ts
 
 # old video cuts kept around locally; GitHub warns past 50MB and they bloat every clone
 *.PREVIOUS_*.mp4
+
+# build artifact of scripts/upload.sh
+/swenlly-deploy.tar.gz
