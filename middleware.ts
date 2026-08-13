@@ -16,6 +16,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Holding page: COMING_SOON=true parks every page on /soon.
+  // /api stays live (the lead form posts to it) — it is excluded above.
+  if (process.env.COMING_SOON === "true" && pathname !== "/soon") {
+    return NextResponse.rewrite(new URL("/soon", req.url));
+  }
+
   const hasLocale = locales.some(
     (l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`)
   );

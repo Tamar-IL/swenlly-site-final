@@ -1,4 +1,12 @@
 {
+  "soon": {
+    "eyebrow": "Coming soon",
+    "h1": "Site under construction",
+    "lead": "We're building something new here. In the meantime — leave us a message and we'll get back to you.",
+    "contactHead": "Talk to us now",
+    "formHead": "Leave a message",
+    "badge": "In progress"
+  },
   "nav": {
     "home": "Home",
     "about": "About",

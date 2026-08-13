@@ -6,11 +6,9 @@ const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  async redirects() {
-    return [
-      { source: "/", destination: "/he", permanent: false },
-    ];
-  },
+  // No "/" -> "/he" redirect here: next.config redirects run BEFORE middleware,
+  // which would bounce the holding page to /he. middleware.ts already sends
+  // bare paths to the default locale.
 };
 
 export default nextConfig;
