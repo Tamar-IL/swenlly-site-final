@@ -18,8 +18,7 @@ next-env.d.ts
 !/nginx/active/.gitkeep
 /certbot
 
-# large media — rsynced to the server, bind-mounted into the container
-/public/media
+# public/media IS committed — the server has no scp path, so the video ships in the repo
 
 # old video cuts kept around locally; GitHub warns past 50MB and they bloat every clone
 *.PREVIOUS_*.mp4
