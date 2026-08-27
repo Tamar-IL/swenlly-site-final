@@ -19,6 +19,10 @@ services:
     env_file: .env
     expose:
       - "3000"
+    volumes:
+      # .dockerignore keeps public/media out of the image, so the video has to be
+      # bind-mounted in — same as docker-compose.yml does.
+      - ./public/media:/app/public/media:ro
     networks:
       - caddy
 

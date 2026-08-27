@@ -7,6 +7,8 @@ cd "$(dirname "$0")/.."
 
 TARGET="${1:-}"
 REMOTE_DIR=/root/swenlly
+# Must match the compose file the server actually runs — see scripts/deploy.sh.
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.caddy.yml}"
 
 if [ -z "$TARGET" ]; then
   echo "usage: $0 root@SERVER_IP" >&2
