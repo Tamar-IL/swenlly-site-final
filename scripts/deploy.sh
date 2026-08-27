@@ -4,6 +4,15 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# This script updates itself with `git pull`, and bash keeps reading the running script
+# from a byte offset in the file — so the first run after deploy.sh itself changes would
+# execute stale (or garbled) logic. Pull first, then re-exec the freshly pulled copy once.
+if [ "${DEPLOY_REEXEC:-0}" != "1" ]; then
+  echo "==> Pulling"
+  git pull --ff-only
+  DEPLOY_REEXEC=1 exec bash "$0" "$@"
+fi
+
 # The server runs Caddy on 80/443, so `web` must join Caddy's external network — that is
 # only declared in docker-compose.caddy.yml. A bare `docker compose` picks docker-compose.yml
 # and strands the container on a network Caddy cannot reach, which shows up as a 502.
@@ -12,9 +21,6 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.caddy.yml}"
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
 echo "==> Using $COMPOSE_FILE"
-
-echo "==> Pulling"
-git pull --ff-only
 
 echo "==> Building image"
 compose build web
