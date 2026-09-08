@@ -4,7 +4,7 @@ import "../globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://swenlly.com"),
   title: "swenlly · סוונלי אוטומציות",
-  description: "האתר בבנייה. השאירו הודעה ונחזור אליכם.",
+  description: "האתר בבנייה. אפשר להשאיר הודעה, ונחזור אליך.",
   // Keep the placeholder out of search results — the real site should be what gets indexed.
   robots: { index: false, follow: false },
 };
