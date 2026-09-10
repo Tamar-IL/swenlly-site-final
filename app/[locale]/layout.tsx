@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Rubik, Heebo } from "next/font/google";
 import "../globals.css";
+
+/* Self-hosted at build time as subsetted woff2 — no request to Google at runtime.
+   Rubik replaces Placebo for display; Heebo is the body face the CSS already expected. */
+const display = Rubik({ subsets: ["hebrew", "latin"], weight: ["700"], display: "swap", variable: "--swl-display" });
+const sans = Heebo({ subsets: ["hebrew", "latin"], weight: ["400", "600", "700"], display: "swap", variable: "--swl-body" });
 import { isLocale, dir, locales, Locale } from "@/lib/i18n";
 import { getContent } from "@/lib/content";
 import { ContentProvider } from "@/components/ContentProvider";
@@ -52,7 +58,7 @@ export default async function LocaleLayout({
   const content = getContent(locale);
 
   return (
-    <html lang={locale} dir={dir(locale)}>
+    <html lang={locale} dir={dir(locale)} className={`${display.variable} ${sans.variable}`}>
       <body>
         <ContentProvider locale={locale} content={content}>
           <Nav locale={locale} content={content} />

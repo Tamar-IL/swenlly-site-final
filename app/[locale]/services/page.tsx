@@ -64,14 +64,17 @@ export default async function ServicesPage({
             {item.id === "systems" && (
               <div className="svcwhat">
                 <div className="svclabel">מוצר שבנינו ללקוח</div>
+                {/* preload="none": the page shows the poster and fetches no video
+                    bytes at all until the visitor actually presses play. */}
                 <video
                   className="svcvideo"
                   src="/media/portfolio-systems-16x9.mp4"
+                  poster="/media/portfolio-poster.jpg"
                   controls
                   playsInline
                   muted
                   loop
-                  preload="metadata"
+                  preload="none"
                 />
               </div>
             )}
