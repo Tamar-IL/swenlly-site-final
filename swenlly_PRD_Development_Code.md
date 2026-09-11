@@ -13,7 +13,7 @@ Dark · Bilingual (HE-RTL / EN-LTR) · Static-first
 | Language | **TypeScript** (strict) | Type-safe. |
 | Styling | **Tailwind CSS** + design-tokens (CSS vars) | Fast, consistent, mapped to Figma Variables. |
 | Motion | **Framer Motion** | reveal/scroll subdued. |
-| Fonts | **next/font/local** | FbEinstein (headers — from client's `font/` folder) · Heebo (body/UI — free OFL). self-hosted, zero FOUT. No paid fonts. |
+| Fonts | **`@font-face` in `globals.css`** | Rubik (headers) · Assistant (body/UI) · JetBrains Mono (labels/figures) — all SIL OFL. Self-hosted in `public/fonts`, subset by `unicode-range`, preloaded per locale, `font-display:swap`. No paid fonts. |
 | Data | **Airtable** (REST API) | Leads, Appointments, Agent Calls. |
 | Email | **Resend** | Meeting/Lead Notifications + Newsletter. |
 | AI | **OpenAI / Anthropic** Behind the Adapter | Service Agent. |
@@ -209,7 +209,7 @@ Genius promotion so that anyone looking for system development, or automation in
 - [ ] Both tracks (he/en) are full, RTL/LTR is working, zero hard copies.
 - [ ] Leads+appointments are written to Airtable, emails are sent.
 - [ ] Real agent answers, collects leads, and sets appointments (provider-agnostic).
-- [ ] Self-hosted fonts/icons (FbEinstein + Heebo, no unnecessary external CDN).
+- [ ] Self-hosted fonts/icons (Rubik + Assistant + JetBrains Mono, all OFL, no unnecessary external CDN).
 - [ ] Turnstile+rate-limit+honeypot enabled; CSP/headers; secrets on server.
 - [ ] Lighthouse: Perf/SEO/A11y/Best-Practices ≥ 95; LCP<2s.
 - [ ] Green e2e tests for lead/booking/agent flows.

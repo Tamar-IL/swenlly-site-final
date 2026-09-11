@@ -51,8 +51,28 @@ export default async function LocaleLayout({
   if (!isLocale(locale)) notFound();
   const content = getContent(locale);
 
+  // Preload only the subsets this locale paints first: the display face and the
+  // text face for its own script. Everything else loads on demand via unicode-range.
+  const script = locale === "he" ? "hebrew" : "latin";
+
   return (
     <html lang={locale} dir={dir(locale)}>
+      <head>
+        <link
+          rel="preload"
+          href={`/fonts/rubik-${script}.woff2`}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href={`/fonts/assistant-${script}.woff2`}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <ContentProvider locale={locale} content={content}>
           <Nav locale={locale} content={content} />
