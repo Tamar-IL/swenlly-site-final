@@ -5,80 +5,60 @@
    swenlly-home-mockup.html. Do NOT restyle away from these values.
    ============================================================ */
 
-/* Display + text faces. Both are SIL OFL (free for commercial use) and are
-   self-hosted rather than pulled from fonts.googleapis.com, so the site builds
-   and runs with no network call out to Google.
-   Rubik  — headings, numerals, the loud voice.
-   Assistant — body copy, built for long-form Hebrew reading.
-   Each family is split latin / latin-ext / hebrew: the browser downloads only
-   the subsets the page actually renders. See public/fonts/README.md. */
+/* Display + text + label faces. All SIL OFL, self-hosted (no call out to
+   fonts.googleapis.com), and cut down to exactly what the site renders:
+
+     - weight-pinned. The CSS only ever asks for Rubik 700 and JetBrains Mono
+       400, so those ship as single weights instead of a 300-900 variable axis;
+       Assistant keeps 400-700 because body, pills and bold labels all use it.
+     - latin is subset to ASCII plus the marks the copy actually uses (· – —
+       … ‹ › → ← ₪). Hebrew keeps its full charset, since the copy changes.
+     - split latin / hebrew by unicode-range, so a page pulls only the scripts
+       it paints.
+
+   Together that is ~57KB for all five files, against ~144KB unsubset. If you
+   ever swap a face, RENAME the file: these are served immutable for a year
+   (see next.config.mjs), so a same-named replacement would be ignored by
+   browsers that already cached it. See public/fonts/README.md. */
 @font-face {
   font-family: 'Rubik';
   src: url('/fonts/rubik-hebrew.woff2') format('woff2');
-  font-weight: 300 900;
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
-}
-@font-face {
-  font-family: 'Rubik';
-  src: url('/fonts/rubik-latin-ext.woff2') format('woff2');
-  font-weight: 300 900;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
   font-family: 'Rubik';
   src: url('/fonts/rubik-latin.woff2') format('woff2');
-  font-weight: 300 900;
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-007F, U+00B7, U+2013-2014, U+2022, U+2026, U+2032-2033, U+2039-203A, U+2190, U+2192, U+20AA;
 }
 @font-face {
   font-family: 'Assistant';
   src: url('/fonts/assistant-hebrew.woff2') format('woff2');
-  font-weight: 200 800;
+  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
 }
 @font-face {
   font-family: 'Assistant';
-  src: url('/fonts/assistant-latin-ext.woff2') format('woff2');
-  font-weight: 200 800;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Assistant';
   src: url('/fonts/assistant-latin.woff2') format('woff2');
-  font-weight: 200 800;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* JetBrains Mono — the small tracked-out labels and tabular figures. Latin only
-   by design (every --mono rule is direction:ltr), so Hebrew in those labels
-   falls through to Assistant rather than to whatever mono the OS happens to
-   have for Hebrew. Also SIL OFL. */
-@font-face {
-  font-family: 'JetBrains Mono';
-  src: url('/fonts/jetbrains-mono-latin-ext.woff2') format('woff2');
   font-weight: 400 700;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range: U+0000-007F, U+00B7, U+2013-2014, U+2022, U+2026, U+2032-2033, U+2039-203A, U+2190, U+2192, U+20AA;
 }
 @font-face {
   font-family: 'JetBrains Mono';
   src: url('/fonts/jetbrains-mono-latin.woff2') format('woff2');
-  font-weight: 400 700;
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-007F, U+00B7, U+2013-2014, U+2022, U+2026, U+2032-2033, U+2039-203A, U+2190, U+2192, U+20AA;
 }
 
 :root {

@@ -1,22 +1,34 @@
 # Fonts
 
-| File | Family | Licence |
-| --- | --- | --- |
-| `rubik-*.woff2` | **Rubik** — display / headings. Hebrew + Latin variable font, weights 300–900. | SIL Open Font Licence 1.1 |
-| `assistant-*.woff2` | **Assistant** — body text. Hebrew + Latin variable font, weights 200–800. | SIL Open Font Licence 1.1 |
-| `jetbrains-mono-*.woff2` | **JetBrains Mono** — small tracked-out labels, eyebrows and tabular figures (`--mono`). Latin variable font, weights 400–700. | SIL Open Font Licence 1.1 |
+All three are SIL Open Font Licence 1.1 — free for commercial use.
 
-Rubik, Assistant and JetBrains Mono are free for commercial use under the OFL and are self-hosted
-here on purpose: no runtime call to fonts.googleapis.com, so the site keeps working
-offline, builds without network access, and sends no visitor data to Google.
+| File | Family | Role | Weight shipped |
+| --- | --- | --- | --- |
+| `rubik-*.woff2` | **Rubik** | Display — headings, numerals | 700 only |
+| `assistant-*.woff2` | **Assistant** | Body — all running text | 400–700 variable |
+| `jetbrains-mono-latin.woff2` | **JetBrains Mono** | Labels, eyebrows, figures (`--mono`) | 400 only |
 
-Each family is split into `latin`, `latin-ext` and (where it has one) `hebrew` subsets, matched by
-`unicode-range` in `app/globals.css` — a visitor only downloads the subsets the
-page actually renders.
+Self-hosted on purpose: no runtime call to fonts.googleapis.com, so the site
+builds without network access and sends no visitor data to Google.
 
-JetBrains Mono carries no Hebrew, which is deliberate: every `--mono` rule sets
-`direction: ltr`, so the stack falls through to Assistant for Hebrew labels
-instead of landing on whatever monospace the visitor's OS keeps for Hebrew.
+## Why these files are small
+
+~57KB for the whole set, against ~144KB unsubset:
+
+- **Weight-pinned.** The CSS only ever asks for Rubik 700 and JetBrains Mono
+  400, so those ship as single weights rather than a 300–900 variable axis.
+  Assistant keeps its 400–700 range — body text, pills and bold labels use it.
+- **Latin is subset to ASCII** plus the marks the copy uses (`· – — … ‹ › → ← ₪`).
+  A rare accented character would fall back to a system font; the site's Latin
+  is brand names and product words, so that does not come up in practice.
+- **Hebrew keeps its full charset**, since the copy changes and must not break.
+- Split latin / hebrew by `unicode-range`, so a page pulls only what it paints.
+
+## If you swap a face
+
+**Rename the file.** `next.config.mjs` serves `/fonts/*` with
+`max-age=31536000, immutable`, so a same-named replacement would be ignored for
+a year by any browser that already cached it. A new filename busts it cleanly.
 
 Source: https://fonts.google.com/specimen/Rubik ·
 https://fonts.google.com/specimen/Assistant ·
