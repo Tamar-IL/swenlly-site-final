@@ -21,7 +21,7 @@ export function Nav({ locale, content }: { locale: Locale; content: Content }) {
     <header className="nav">
       <div className="nav-in">
         <Link className="mark" href={base} aria-label="swenlly">
-          <img src="/brand/swenlly-wordmark-white.png" alt="סוונלי" className="nav-logo" />
+          <img src="/brand/swenlly-wordmark-white.webp" alt="סוונלי" className="nav-logo" />
         </Link>
         <nav className="nlinks">
           {links.map((l) => (

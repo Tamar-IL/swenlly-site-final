@@ -37,7 +37,7 @@ export function ChatWidget() {
           overflow: "hidden",
         }}
       >
-        {open ? "✕" : <img src="/brand/swenlly-chat-icon.png" alt="סוונלי" style={{ height: "100%", width: "100%", objectFit: "cover", opacity: 0.9 }} />}
+        {open ? "✕" : <img src="/brand/swenlly-chat-icon.webp" alt="סוונלי" loading="lazy" decoding="async" style={{ height: "100%", width: "100%", objectFit: "cover", opacity: 0.9 }} />}
       </button>
 
       {open && (

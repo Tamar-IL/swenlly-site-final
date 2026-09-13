@@ -12,7 +12,7 @@ export default function SoonPage() {
       <main className="soon">
         <div className="soon-in">
           <header className="soon-head">
-            <img src="/brand/swenlly-wordmark-white.png" alt="סוונלי" className="soon-logo" />
+            <img src="/brand/swenlly-wordmark-white.webp" alt="סוונלי" className="soon-logo" />
             <span className="soon-badge">
               <i className="soon-dot" aria-hidden="true" />
               {s.badge}
