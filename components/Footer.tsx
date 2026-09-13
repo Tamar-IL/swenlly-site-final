@@ -10,7 +10,7 @@ export function Footer({ locale, content }: { locale: Locale; content: Content }
       <div className="wrap">
         <div className="fg">
           <div>
-            <img src="/brand/swenlly-wordmark-white.png" alt="סוונלי" className="footer-logo" />
+            <img src="/brand/swenlly-wordmark-white.webp" alt="סוונלי" className="footer-logo" />
             <div className="fcol" style={{ marginTop: 10 }}>
               {content.brand.sub}
             </div>
