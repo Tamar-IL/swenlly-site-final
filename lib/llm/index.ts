@@ -1,16 +1,24 @@
 import { ChatMessage, runAnthropicAgent, anthropicConfigured } from "./anthropic";
+import { runOpenAIAgent, openaiConfigured } from "./openai";
 
 export type { ChatMessage };
 
+type Provider = "anthropic" | "openai";
+
+function provider(): Provider {
+  const raw = (process.env.LLM_PROVIDER || "anthropic").toLowerCase().trim();
+  // Accept the names people actually type in a .env file.
+  if (raw === "openai" || raw === "gpt" || raw === "chatgpt") return "openai";
+  return "anthropic";
+}
+
 export function agentConfigured(): boolean {
-  const provider = process.env.LLM_PROVIDER || "anthropic";
-  // OpenAI provider is a stub for now; only Anthropic is implemented.
-  return provider === "anthropic" && anthropicConfigured();
+  return provider() === "openai" ? openaiConfigured() : anthropicConfigured();
 }
 
 /** Provider-agnostic entry point. Selected by LLM_PROVIDER (default: anthropic). */
 export async function runAgent(history: ChatMessage[], locale: string): Promise<string> {
-  const provider = process.env.LLM_PROVIDER || "anthropic";
-  if (provider === "anthropic") return runAnthropicAgent(history, locale);
-  throw new Error(`LLM provider not implemented: ${provider}`);
+  return provider() === "openai"
+    ? runOpenAIAgent(history, locale)
+    : runAnthropicAgent(history, locale);
 }

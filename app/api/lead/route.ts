@@ -5,6 +5,14 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { createRecord } from "@/lib/airtable";
 import { notifyLead } from "@/lib/resend";
 
+const FALLBACK_ERROR = "לא הצלחנו לשלוח. נא לבדוק שהשם והטלפון מלאים.";
+
+/** Zod's built-in messages are English; ours are Hebrew. Anything without a
+ *  Hebrew character is a default we forgot to translate — show the fallback. */
+function hebrewIssue(msg?: string): string {
+  return msg && /[\u0590-\u05FF]/.test(msg) ? msg : FALLBACK_ERROR;
+}
+
 export async function POST(req: Request) {
   const ip = clientIp(req);
   if (!rateLimit(`lead:${ip}`, 8, 60_000)) {
@@ -21,7 +29,9 @@ export async function POST(req: Request) {
   const parsed = leadSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: parsed.error.issues[0]?.message || "נתונים לא תקינים" },
+      // Only surface our own Hebrew messages; a stray Zod default (English)
+      // must never reach a visitor.
+      { ok: false, error: hebrewIssue(parsed.error.issues[0]?.message) },
       { status: 400 }
     );
   }

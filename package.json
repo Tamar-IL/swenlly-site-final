@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "airtable": "^0.12.2",
     "next": "^15.5.25",
+    "openai": "^7.15.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "resend": "^4.1.2",
