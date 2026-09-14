@@ -17,11 +17,13 @@ export function airtableConfigured(): boolean {
 export async function createRecord(
   table: string,
   fields: Record<string, unknown>
-): Promise<{ ok: boolean; id?: string }> {
+): Promise<{ ok: boolean; id?: string; skipped?: boolean }> {
   const cfg = config();
   if (!cfg) {
-    console.warn(`[airtable] not configured — skipped write to ${table}`, fields);
-    return { ok: false };
+    // Not an error: Airtable is optional, and leads are delivered by email when
+    // it is unset. Deliberately does not log `fields` — that is a visitor's name,
+    // phone and email, and it does not belong in container logs on every submit.
+    return { ok: false, skipped: true };
   }
   try {
     const res = await fetch(`${API}/${cfg.base}/${encodeURIComponent(table)}`, {
