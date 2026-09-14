@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Rubik, Heebo } from "next/font/google";
 import "../globals.css";
-
-/* Self-hosted at build time as subsetted woff2 — no request to Google at runtime.
-   Rubik replaces Placebo for display; Heebo is the body face the CSS already expected. */
-const display = Rubik({ subsets: ["hebrew", "latin"], weight: ["700"], display: "swap", variable: "--swl-display" });
-const sans = Heebo({ subsets: ["hebrew", "latin"], weight: ["400", "600", "700"], display: "swap", variable: "--swl-body" });
 import { isLocale, dir, locales, Locale } from "@/lib/i18n";
 import { getContent } from "@/lib/content";
 import { ContentProvider } from "@/components/ContentProvider";
-import { RevealInit } from "@/components/RevealInit";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ChatWidget } from "@/components/widgets/ChatWidget";
 import { OrgJsonLd } from "@/components/JsonLd";
+
+const REVEAL_SCRIPT = "(function(){try{var d=document,e=d.querySelectorAll('.reveal');if(!e.length||!('IntersectionObserver' in window))return;var vh=window.innerHeight||d.documentElement.clientHeight,b=[],i,el;for(i=0;i<e.length;i++){el=e[i];if(el.getBoundingClientRect().top>vh*0.9){el.className+=' pending';b.push(el);}}if(!b.length)return;var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target);}});},{threshold:.08});for(i=0;i<b.length;i++)io.observe(b[i]);setTimeout(function(){for(var j=0;j<b.length;j++)b[j].classList.add('in');},4000);}catch(x){}})();";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -57,17 +52,40 @@ export default async function LocaleLayout({
   if (!isLocale(locale)) notFound();
   const content = getContent(locale);
 
+  // Preload only the subsets this locale paints first: the display face and the
+  // text face for its own script. Everything else loads on demand via unicode-range.
+  const script = locale === "he" ? "hebrew" : "latin";
+
   return (
-    <html lang={locale} dir={dir(locale)} className={`${display.variable} ${sans.variable}`}>
+    <html lang={locale} dir={dir(locale)}>
+      <head>
+        <link
+          rel="preload"
+          href={`/fonts/rubik-${script}.woff2`}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href={`/fonts/assistant-${script}.woff2`}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <ContentProvider locale={locale} content={content}>
           <Nav locale={locale} content={content} />
           <main>{children}</main>
           <Footer locale={locale} content={content} />
           <ChatWidget />
-          <RevealInit />
           <OrgJsonLd />
         </ContentProvider>
+        {/* Last thing in the body, so the DOM above is already parsed. It hides
+            only what is below the fold and animates that in on scroll; anything
+            on screen was never hidden and needed no JS to appear. */}
+        <script dangerouslySetInnerHTML={{ __html: REVEAL_SCRIPT }} />
       </body>
     </html>
   );

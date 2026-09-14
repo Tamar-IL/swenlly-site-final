@@ -24,7 +24,7 @@ export default async function HomePage({
       <div className="first reveal" style={{ position: "relative", marginTop: 48, textAlign: "center", marginBottom: 56, padding: "72px 40px" }}>
         {/* brand mark sits behind the tagline as a watermark */}
         <img
-          src="/brand/swenlly-icon-automation.png"
+          src="/brand/swenlly-icon-automation.webp"
           alt=""
           aria-hidden="true"
           style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", height: "clamp(220px, 26vw, 340px)", width: "auto", opacity: 0.18, pointerEvents: "none", userSelect: "none" }}

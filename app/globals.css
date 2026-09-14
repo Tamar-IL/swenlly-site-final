@@ -5,12 +5,60 @@
    swenlly-home-mockup.html. Do NOT restyle away from these values.
    ============================================================ */
 
+/* Display + text + label faces. All SIL OFL, self-hosted (no call out to
+   fonts.googleapis.com), and cut down to exactly what the site renders:
+
+     - weight-pinned. The CSS only ever asks for Rubik 700 and JetBrains Mono
+       400, so those ship as single weights instead of a 300-900 variable axis;
+       Assistant keeps 400-700 because body, pills and bold labels all use it.
+     - latin is subset to ASCII plus the marks the copy actually uses (· – —
+       … ‹ › → ← ₪). Hebrew keeps its full charset, since the copy changes.
+     - split latin / hebrew by unicode-range, so a page pulls only the scripts
+       it paints.
+
+   Together that is ~57KB for all five files, against ~144KB unsubset. If you
+   ever swap a face, RENAME the file: these are served immutable for a year
+   (see next.config.mjs), so a same-named replacement would be ignored by
+   browsers that already cached it. See public/fonts/README.md. */
 @font-face {
-  font-family: 'FbEng';
-  src: url('/fonts/fbeinstein-eng-medium.otf') format('opentype');
-  font-weight: 500;
+  font-family: 'Rubik';
+  src: url('/fonts/rubik-hebrew.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('/fonts/rubik-latin.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-007F, U+00B7, U+2013-2014, U+2022, U+2026, U+2032-2033, U+2039-203A, U+2190, U+2192, U+20AA;
+}
+@font-face {
+  font-family: 'Assistant';
+  src: url('/fonts/assistant-hebrew.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'Assistant';
+  src: url('/fonts/assistant-latin.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-007F, U+00B7, U+2013-2014, U+2022, U+2026, U+2032-2033, U+2039-203A, U+2190, U+2192, U+20AA;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-007F, U+00B7, U+2013-2014, U+2022, U+2026, U+2032-2033, U+2039-203A, U+2190, U+2192, U+20AA;
 }
 
 :root {
@@ -19,9 +67,9 @@
   --tx:#FAFAFA; --tx2:#A8A8A8; --tx3:#737373; --tx4:#525252;
   --fill:#A3A3A3; --btn:#E7E7E7; --green:#94C93D; --green-soft:rgba(148,201,61,.14);
   --maxw:1160px;
-  --disp:var(--swl-display),'Segoe UI',sans-serif;
-  --sans:var(--swl-body),'Segoe UI',Arial,sans-serif;
-  --mono:'FbEng',ui-monospace,'SF Mono','Segoe UI',monospace;
+  --disp:'Rubik','Assistant','Segoe UI',sans-serif;
+  --sans:'Assistant','Rubik','Segoe UI',Arial,sans-serif;
+  --mono:'JetBrains Mono','Assistant',ui-monospace,'SF Mono',monospace;
 }
 
 *{box-sizing:border-box}
@@ -29,7 +77,7 @@ html{scroll-behavior:smooth;scrollbar-color:var(--tx3) transparent}
 html::-webkit-scrollbar{width:8px}
 html::-webkit-scrollbar-track{background:transparent}
 html::-webkit-scrollbar-thumb{background:var(--tx3);border-radius:4px}
-body{margin:0;background:var(--bg);color:var(--tx2);font-family:var(--sans)!important;font-size:15px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--tx2);font-family:var(--sans);font-size:15px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 p{margin:0}
 h1,h2,h3,h4{margin:0;color:var(--tx);font-family:var(--disp);font-weight:700;line-height:1.03;letter-spacing:-.02em;text-wrap:balance}
@@ -201,9 +249,18 @@ footer img.logo{height:28px;opacity:.9}
 .fcol{font-size:13.5px;color:var(--tx3);line-height:2.1;font-family:var(--sans)}.fcol a:hover{color:var(--tx)}
 .fb{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--tx4)}
 
-.reveal{opacity:0;transform:translateY(12px);transition:opacity .55s ease,transform .55s ease}
-.reveal.in{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}html{scroll-behavior:auto}}
+/* Scroll-reveal. Nothing is hidden by CSS alone, and nothing on screen is ever
+   hidden at all — the inline script at the end of <body> adds .pending only to
+   blocks already below the fold, where the user cannot watch them disappear.
+   Everything in the first viewport paints with the HTML and never waits on JS.
+
+   This used to be `.reveal{opacity:0}` unconditionally, un-hidden by a React
+   effect, so a page stayed blank until the bundle hydrated. If the script below
+   never runs, every block simply stays visible. */
+.reveal{transition:opacity .55s ease,transform .55s ease}
+.reveal.pending{opacity:0;transform:translateY(12px)}
+.reveal.pending.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.reveal.pending{opacity:1;transform:none;transition:none}html{scroll-behavior:auto}}
 
 /* ============================================================
    Extensions (same language) for inner pages — services, pricing,
