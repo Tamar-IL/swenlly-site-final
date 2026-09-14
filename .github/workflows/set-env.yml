@@ -1,0 +1,138 @@
+name: Update server environment
+
+# Writes values from GitHub Secrets into the server's .env, then recreates the
+# container so they take effect.
+#
+# Why this exists: the Hetzner web console corrupts pasted text — underscores
+# become hyphens and Shift is dropped from symbols, so a pasted API key arrives
+# silently wrong. Pasting into GitHub's browser UI works correctly, and this
+# workflow carries the value to the server byte-exact over scp.
+
+on:
+  workflow_dispatch:
+    inputs:
+      llm_provider:
+        description: "Which agent provider to run (blank = leave unchanged)"
+        type: choice
+        options: ["", "openai", "anthropic"]
+        default: ""
+      coming_soon:
+        description: "Holding page (blank = leave unchanged)"
+        type: choice
+        options: ["", "true", "false"]
+        default: ""
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  update-env:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply environment to the server
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          # Every value below is optional. A secret left unset is skipped, so the
+          # server keeps whatever it already has for that key.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          LLM_PROVIDER: ${{ inputs.llm_provider }}
+          COMING_SOON: ${{ inputs.coming_soon }}
+        run: |
+          set -euo pipefail
+          for v in SSH_KEY SSH_HOST SSH_USER; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::Secret $v is not set. See DEPLOY.md section 8."
+              exit 1
+            fi
+          done
+
+          # Build the fragment. Values are never echoed — only key names are.
+          frag="$(mktemp)"; chmod 600 "$frag"
+          names=""
+          add() {
+            [ -n "${2:-}" ] || return 0
+            printf '%s=%s\n' "$1" "$2" >> "$frag"
+            names="$names $1"
+          }
+          add OPENAI_API_KEY    "${OPENAI_API_KEY:-}"
+          add OPENAI_MODEL      "${OPENAI_MODEL:-}"
+          add ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
+          add RESEND_API_KEY    "${RESEND_API_KEY:-}"
+          add NOTIFY_EMAIL      "${NOTIFY_EMAIL:-}"
+          add AIRTABLE_API_KEY  "${AIRTABLE_API_KEY:-}"
+          add AIRTABLE_BASE_ID  "${AIRTABLE_BASE_ID:-}"
+          add TURNSTILE_SECRET  "${TURNSTILE_SECRET:-}"
+          add LLM_PROVIDER      "${LLM_PROVIDER:-}"
+          add COMING_SOON       "${COMING_SOON:-}"
+
+          if [ ! -s "$frag" ]; then
+            echo "::error::No values to apply — set at least one secret, or pick an input."
+            exit 1
+          fi
+          echo "Applying:$names"
+
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "${KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::DEPLOY_KNOWN_HOSTS not set — trusting the host key on first sight."
+            ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+          SSHOPTS="-i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes"
+
+          scp $SSHOPTS -P "$SSH_PORT" "$frag" "$SSH_USER@$SSH_HOST:/tmp/envfrag"
+          scp $SSHOPTS -P "$SSH_PORT" scripts/apply-env.sh "$SSH_USER@$SSH_HOST:/tmp/apply-env.sh"
+          rm -f "$frag"
+
+          ssh $SSHOPTS -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -s <<'REMOTE'
+          set -euo pipefail
+          cd ~/swenlly
+          install -m 755 /tmp/apply-env.sh scripts/apply-env.sh
+          ./scripts/apply-env.sh /tmp/envfrag
+          shred -u /tmp/envfrag 2>/dev/null || rm -f /tmp/envfrag
+          rm -f /tmp/apply-env.sh
+
+          # Compose reads env_file at container CREATION, so a restart would bring
+          # the old values straight back. Recreate instead. No rebuild needed —
+          # only the environment changed, not the image.
+          echo "==> Recreating container"
+          docker compose -f docker-compose.caddy.yml up -d --force-recreate web
+
+          echo "==> Waiting for health"
+          for i in $(seq 1 30); do
+            s=$(docker inspect -f '{{.State.Health.Status}}' swenlly-web 2>/dev/null || echo starting)
+            [ "$s" = "healthy" ] && { echo "    healthy"; break; }
+            [ "$i" = "30" ] && { echo "    NOT healthy — logs:"; docker logs --tail=50 swenlly-web; exit 1; }
+            sleep 2
+          done
+          REMOTE
+
+      - name: Report what the server now sees
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          # /api/health reports presence only, never values — safe to print.
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
+              -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+              'curl -s --max-time 10 http://127.0.0.1:3000/api/health' || true
