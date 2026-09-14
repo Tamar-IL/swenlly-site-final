@@ -205,7 +205,7 @@ export function ServiceMock({ type }: { type: string }) {
               { h: "ליד חדש נכנס", p: "מהאתר או מוואטסאפ" },
               { h: "נפתח ב-CRM", p: "אוטומטית, בלי הקלדה" },
               { h: "הודעת ברוכים הבאים", p: "נשלחת ללקוח מיד" },
-              { h: "תזכורת מעקב", p: "אצלכם בעוד יומיים" },
+              { h: "תזכורת מעקב", p: "אצלך בעוד יומיים" },
             ].map((s) => (
               <div className="pstep" key={s.h} style={{ paddingInlineStart: 34 }}>
                 <h4>{s.h}</h4>

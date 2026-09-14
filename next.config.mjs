@@ -20,8 +20,8 @@ const nextConfig = {
   //            a face swap RENAMES the file (see the note in globals.css).
   //   images — a week, and servable stale while it revalidates in the background,
   //            so replacing a logo shows up within days rather than never.
-  //   media  — a month. The portfolio video is ~55MB; re-fetching it is the one
-  //            thing here that genuinely hurts.
+  //   media  — a month. The portfolio video is ~4MB after re-encoding; it is
+  //            still the largest single asset, so keep it out of the network.
   async headers() {
     const cache = (value) => [{ key: "Cache-Control", value }];
     return [

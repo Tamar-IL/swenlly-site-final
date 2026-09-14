@@ -4,15 +4,15 @@ import { z } from "zod";
 const phone = z
   .string()
   .trim()
-  .min(1)
-  .max(30)
+  .min(1, "נא למלא מספר טלפון")
+  .max(30, "מספר הטלפון ארוך מדי")
   .regex(/^[-+0-9()\s]{1,30}$/, "מספר טלפון לא תקין");
 
 export const leadSchema = z.object({
-  name: z.string().trim().min(1, "נא למלא שם").max(120),
+  name: z.string().trim().min(1, "נא למלא שם").max(120, "השם ארוך מדי"),
   phone,
-  email: z.string().trim().email("אימייל לא תקין").max(160).optional().or(z.literal("")),
-  message: z.string().trim().max(2000).optional().or(z.literal("")),
+  email: z.string().trim().email("אימייל לא תקין").max(160, "האימייל ארוך מדי").optional().or(z.literal("")),
+  message: z.string().trim().max(2000, "ההודעה ארוכה מדי — עד 2000 תווים").optional().or(z.literal("")),
   source: z.string().max(60).default("contact"),
   locale: z.string().max(10).default("he"),
   turnstileToken: z.string().optional(),
@@ -21,11 +21,11 @@ export const leadSchema = z.object({
 export type LeadInput = z.infer<typeof leadSchema>;
 
 export const bookingSchema = z.object({
-  name: z.string().trim().min(1, "נא למלא שם").max(120),
+  name: z.string().trim().min(1, "נא למלא שם").max(120, "השם ארוך מדי"),
   phone,
-  email: z.string().trim().email("אימייל לא תקין").max(160),
-  slot: z.string().trim().min(1, "נא לבחור מועד").max(60),
-  topic: z.string().trim().max(400).optional().or(z.literal("")),
+  email: z.string().trim().email("אימייל לא תקין").max(160, "האימייל ארוך מדי"),
+  slot: z.string().trim().min(1, "נא לבחור מועד").max(60, "המועד ארוך מדי"),
+  topic: z.string().trim().max(400, "הנושא ארוך מדי").optional().or(z.literal("")),
   locale: z.string().max(10).default("he"),
   turnstileToken: z.string().optional(),
   hp: z.string().optional(),

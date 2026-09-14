@@ -130,20 +130,36 @@ Check it: **https://swenlly.com**
 
 ## 6. Deploying changes later
 
-On your machine:
-
-```bash
-git add -A && git commit -m "..." && git push
-```
-
-On the server:
+Pushing to `main` deploys automatically — see section 8. To deploy by hand:
 
 ```bash
 cd ~/swenlly && ./scripts/deploy.sh
 ```
 
-It pulls, rebuilds, restarts, and waits for the health check to pass — printing the logs
-and exiting non-zero if the new build is broken.
+It pulls, rebuilds, recreates the container, and waits for the health check to pass —
+printing the logs and exiting non-zero if the new build is broken.
+
+### Changing a value in `.env`
+
+**`docker compose restart` is not enough.** Compose reads `env_file` when it *creates* a
+container, so a restart brings the old values straight back. To apply an `.env` edit:
+
+```bash
+cd ~/swenlly
+docker compose -f docker-compose.caddy.yml up -d --force-recreate web
+```
+
+(`./scripts/deploy.sh` also picks up `.env` changes, because it ends in `up -d`.)
+
+Verify the container really has the new value:
+
+```bash
+docker exec swenlly-web printenv COMING_SOON
+```
+
+Variable **names must use underscores**, never hyphens or spaces — `COMING_SOON`, not
+`COMING-SOON`. A misspelled name is silently ignored, which looks exactly like the
+setting having no effect.
 
 ---
 
@@ -192,3 +208,40 @@ per hour per domain, so fix DNS before retrying.
 Check with `ls -la ~/swenlly/public/media`.
 
 **Out of disk after several deploys** — `docker system prune -af`.
+
+
+---
+
+## 8. Automatic deploys from GitHub
+
+`.github/workflows/deploy.yml` redeploys the site on every push to `main`. Merging a pull
+request is therefore a release. It SSHes in and runs `./scripts/deploy.sh`, so the manual
+path and the automatic one are the same code.
+
+Add these under **Settings -> Secrets and variables -> Actions -> New repository secret**:
+
+| Secret | Value |
+|--------|-------|
+| `DEPLOY_HOST` | the server's IP or hostname |
+| `DEPLOY_USER` | the SSH user that owns `~/swenlly` |
+| `DEPLOY_SSH_KEY` | the **private** key, whole file including the BEGIN/END lines |
+| `DEPLOY_PORT` | optional, defaults to `22` |
+| `DEPLOY_KNOWN_HOSTS` | optional but recommended, see below |
+
+Generate a key pair dedicated to deploys — do not reuse a personal key:
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/swenlly_deploy -N ""
+ssh-copy-id -i ~/.ssh/swenlly_deploy.pub USER@SERVER_IP
+cat ~/.ssh/swenlly_deploy          # -> paste into DEPLOY_SSH_KEY
+ssh-keyscan -H SERVER_IP           # -> paste into DEPLOY_KNOWN_HOSTS
+```
+
+Without `DEPLOY_KNOWN_HOSTS` the workflow accepts whatever host key it is offered on the
+first connection, which is a chance for a man-in-the-middle. Setting it pins the server.
+
+The server pulls from a private repo, so its git credentials must already be stored
+(`git -C ~/swenlly pull` should succeed with no prompt). If it asks for a password, store
+a PAT once with `git config --global credential.helper store` and pull manually.
+
+Run it by hand from the **Actions** tab -> *Deploy to production* -> *Run workflow*.

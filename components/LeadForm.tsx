@@ -14,6 +14,21 @@ export function LeadForm() {
     const form = e.currentTarget;
     const fd = new FormData(form);
     if (fd.get("company")) return; // honeypot
+
+    // The form sets noValidate, so the browser will not enforce `required` —
+    // check here instead of letting the visitor round-trip to a server error.
+    const name = String(fd.get("name") || "").trim();
+    const phone = String(fd.get("phone") || "").trim();
+    if (!name || !phone) {
+      setState("err");
+      setMsg(f.missingErr);
+      return;
+    }
+    if (!fd.get("consent")) {
+      setState("err");
+      setMsg(f.consentErr);
+      return;
+    }
     setState("sending");
     try {
       const res = await fetch("/api/lead", {
@@ -62,7 +77,14 @@ export function LeadForm() {
         <textarea id="lf-message" name="message" />
       </div>
       <div className="fld" style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
-        <input id="lf-consent" name="consent" type="checkbox" style={{ marginTop: 2, width: 18, height: 18, cursor: "pointer", flexShrink: 0 }} />
+        <input
+          id="lf-consent"
+          name="consent"
+          type="checkbox"
+          required
+          /* accentColor recolours the native tick — the browser default is blue */
+          style={{ marginTop: 2, width: 18, height: 18, cursor: "pointer", flexShrink: 0, accentColor: "var(--green)" }}
+        />
         <label htmlFor="lf-consent" style={{ cursor: "pointer", fontSize: 14 }}>{f.consent}</label>
       </div>
       <input className="hp" type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" />
