@@ -9,7 +9,7 @@ import { Footer } from "@/components/Footer";
 import { ChatWidget } from "@/components/widgets/ChatWidget";
 import { OrgJsonLd } from "@/components/JsonLd";
 
-const REVEAL_SCRIPT = "(function(){try{var d=document,r=d.documentElement;if(!('IntersectionObserver' in window))return;r.className+=' js-reveal';var done=function(){var n=d.querySelectorAll('.reveal:not(.in)');for(var i=0;i<n.length;i++)n[i].classList.add('in');};var start=function(){try{var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.08});var n=d.querySelectorAll('.reveal');for(var i=0;i<n.length;i++)io.observe(n[i]);}catch(e){done();}};if(d.readyState==='loading')d.addEventListener('DOMContentLoaded',start);else start();setTimeout(done,3000);}catch(e){}})();";
+const REVEAL_SCRIPT = "(function(){try{var d=document,e=d.querySelectorAll('.reveal');if(!e.length||!('IntersectionObserver' in window))return;var vh=window.innerHeight||d.documentElement.clientHeight,b=[],i,el;for(i=0;i<e.length;i++){el=e[i];if(el.getBoundingClientRect().top>vh*0.9){el.className+=' pending';b.push(el);}}if(!b.length)return;var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target);}});},{threshold:.08});for(i=0;i<b.length;i++)io.observe(b[i]);setTimeout(function(){for(var j=0;j<b.length;j++)b[j].classList.add('in');},4000);}catch(x){}})();";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -59,12 +59,6 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir(locale)}>
       <head>
-        {/* Reveal-on-scroll is wired up here, inline, rather than in a React
-            effect: this runs the moment the HTML is parsed, so content appears
-            without waiting on the JS bundle to download and hydrate. It only
-            hides anything once it knows it can reveal it again, and a 3s
-            failsafe guarantees nothing stays invisible. */}
-        <script dangerouslySetInnerHTML={{ __html: REVEAL_SCRIPT }} />
         <link
           rel="preload"
           href={`/fonts/rubik-${script}.woff2`}
@@ -88,6 +82,10 @@ export default async function LocaleLayout({
           <ChatWidget />
           <OrgJsonLd />
         </ContentProvider>
+        {/* Last thing in the body, so the DOM above is already parsed. It hides
+            only what is below the fold and animates that in on scroll; anything
+            on screen was never hidden and needed no JS to appear. */}
+        <script dangerouslySetInnerHTML={{ __html: REVEAL_SCRIPT }} />
       </body>
     </html>
   );
