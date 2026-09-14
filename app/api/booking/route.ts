@@ -43,13 +43,26 @@ export async function POST(req: Request) {
     status: "Pending",
     createdAt: new Date().toISOString(),
   });
-  await notifyBooking({
+  const mailed = await notifyBooking({
     name: data.name,
     phone: data.phone,
     email: data.email,
     slot: data.slot,
     topic: data.topic || undefined,
   });
+
+  if (!result.ok && !mailed) {
+    console.error("[booking] LOST — Airtable and email both failed", {
+      airtable: result.ok,
+      email: mailed,
+      name: data.name,
+      phone: data.phone,
+    });
+    return NextResponse.json(
+      { ok: false, error: "לא הצלחנו לקלוט את הבקשה. אפשר לכתוב לנו בוואטסאפ ונתאם מועד." },
+      { status: 502 }
+    );
+  }
 
   return NextResponse.json({ ok: true, bookingId: result.id });
 }

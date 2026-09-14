@@ -294,7 +294,7 @@ footer img.logo{height:28px;opacity:.9}
 .fld input,.fld textarea{background:var(--card2);border:1px solid var(--line2);border-radius:12px;padding:13px 15px;color:var(--tx);font-family:var(--sans);font-size:14.5px;width:100%}
 .fld input:focus,.fld textarea:focus{outline:none;border-color:var(--tx3)}
 .fld textarea{min-height:120px;resize:vertical}
-.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.hp{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
 .formnote{font-size:12.5px;color:var(--tx3);font-family:var(--sans);margin-top:4px}
 .formstatus{font-size:14px;font-family:var(--sans);margin-top:6px}
 .formstatus.ok{color:var(--green)}

@@ -5,6 +5,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { createRecord } from "@/lib/airtable";
 import { notifyLead } from "@/lib/resend";
 
+const LEAD_LOST = "לא הצלחנו לקלוט את הפנייה. אפשר לכתוב לנו בוואטסאפ ונחזור אליך.";
 const FALLBACK_ERROR = "לא הצלחנו לשלוח. נא לבדוק שהשם והטלפון מלאים.";
 
 /** Zod's built-in messages are English; ours are Hebrew. Anything without a
@@ -44,7 +45,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "אימות נכשל. נסו שוב." }, { status: 400 });
   }
 
-  await createRecord("Leads", {
+  // Both adapters swallow their own failures and return false, so capture the
+  // results: if the lead reached neither Airtable nor an inbox it is simply lost,
+  // and telling the visitor "we got it" is the one answer we must not give.
+  const saved = await createRecord("Leads", {
     name: data.name,
     phone: data.phone,
     email: data.email || "",
@@ -54,13 +58,23 @@ export async function POST(req: Request) {
     status: "New",
     createdAt: new Date().toISOString(),
   });
-  await notifyLead({
+  const mailed = await notifyLead({
     name: data.name,
     phone: data.phone,
     email: data.email || undefined,
     message: data.message || undefined,
     source: data.source,
   });
+
+  if (!saved.ok && !mailed) {
+    console.error("[lead] LOST — Airtable and email both failed", {
+      airtable: saved.ok,
+      email: mailed,
+      name: data.name,
+      phone: data.phone,
+    });
+    return NextResponse.json({ ok: false, error: LEAD_LOST }, { status: 502 });
+  }
 
   return NextResponse.json({ ok: true });
 }
