@@ -43,6 +43,23 @@ compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
 echo "==> Using $COMPOSE_FILE"
 
+# A build that dies part-way never reaches the prune at the bottom, so every
+# failed deploy leaves its layers behind and the next one has less room than the
+# last. Clear dangling images first — it costs nothing and keeps the build cache.
+echo "==> Reclaiming space"
+docker image prune -f >/dev/null 2>&1 || true
+avail_kb="$(df -Pk . | awk 'NR==2 {print $4}')"
+echo "    $(( avail_kb / 1024 )) MB free on $(df -Ph . | awk 'NR==2 {print $6}')"
+if [ "$avail_kb" -lt 2097152 ]; then
+  # containerd does not fail cleanly when it runs out of room mid-export: it
+  # reports a missing blob ("failed to commit: rename ... no such file or
+  # directory"), which reads like corruption rather than a full disk.
+  echo "!!  Under 2 GB free. A build needs more than that, and running out"
+  echo "!!  mid-export looks like a containerd blob error, not a disk error."
+  echo "!!  Reclaim space first:  docker system prune -af"
+  exit 1
+fi
+
 echo "==> Building image"
 compose build web
 

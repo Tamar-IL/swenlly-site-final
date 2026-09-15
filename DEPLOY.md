@@ -469,6 +469,28 @@ Check with `ls -la ~/swenlly/public/media`.
 
 **Out of disk after several deploys** — `docker system prune -af`.
 
+**The deploy builds fine, then fails writing the image:**
+
+```
+failed to export layer: ... failed to commit: rename
+  .../ingest/<hash>/data → .../blobs/sha256/<hash>: no such file or directory
+```
+
+That reads like a corrupted content store, but it is almost always the disk
+filling up during the export — containerd reports the half-written blob as
+missing rather than reporting no space. Check and clear:
+
+```bash
+df -h /var/lib
+docker system prune -af          # images, containers, build cache
+./scripts/deploy.sh
+```
+
+`deploy.sh` now prunes dangling images before each build and refuses to start
+one with under 2 GB free, so it says "reclaim space" instead of failing this
+way. If the disk has room and it still happens, the content store really is
+damaged: `sudo systemctl restart docker` and deploy again.
+
 **The deploy workflow is red and the site never changes.** Check the log for:
 
 ```
