@@ -100,7 +100,7 @@ export default async function ServicesPage({
         <p>{s.note}</p>
       </div>
 
-      <CtaBlock cta={s.cta} href={`${base}/contact`} />
+      <CtaBlock cta={s.cta} href={`${base}/booking`} />
 
       <JsonLd
         data={{

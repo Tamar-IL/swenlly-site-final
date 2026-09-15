@@ -37,7 +37,7 @@ export default async function PricingPage({
         <h1>{p.h1}</h1>
         <p className="lead">{p.lead}</p>
         <div className="hcta" style={{ marginTop: 26 }}>
-          <Link className="pill pill-w" href={`${base}/contact`}>
+          <Link className="pill pill-w" href={`${base}/booking`}>
             {p.primary}
           </Link>
         </div>
@@ -112,7 +112,7 @@ export default async function PricingPage({
         <p>{p.maintenanceNote}</p>
       </div>
 
-      <CtaBlock cta={p.cta} href={`${base}/contact`} />
+      <CtaBlock cta={p.cta} href={`${base}/booking`} />
     </div>
   );
 }

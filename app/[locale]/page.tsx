@@ -43,7 +43,7 @@ export default async function HomePage({
           <h1 style={{ marginBottom: 20 }}>{h.hero.h1}</h1>
           <p className="lead" style={{ marginBottom: 24 }}>{h.hero.lead}</p>
           <div className="hcta">
-            <Link className="pill pill-w" href={`${base}/contact`}>
+            <Link className="pill pill-w" href={`${base}/booking`}>
               {h.hero.ctaPrimary}
             </Link>
             <Link className="pill pill-o" href={`${base}/services`}>
@@ -132,7 +132,7 @@ export default async function HomePage({
         <h2>{h.cta.h2}</h2>
         <p>{h.cta.p}</p>
         <div className="ctarow">
-          <Link className="pill pill-w" href={`${base}/contact`}>
+          <Link className="pill pill-w" href={`${base}/booking`}>
             {h.cta.primary}
           </Link>
           <NewsletterForm />
