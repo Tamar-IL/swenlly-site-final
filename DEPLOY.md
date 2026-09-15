@@ -238,13 +238,28 @@ or through GitHub secrets (section 6c) as `GOOGLE_CLIENT_ID`,
 
 1. Create or pick a project.
 2. **APIs & Services → Library** → enable **Google Calendar API**.
-3. **APIs & Services → OAuth consent screen** → *External* → and then
-   **PUBLISH IT** (Publishing status: *In production*). This matters: while the
-   app sits in *Testing*, Google **expires the refresh token after 7 days**, so
-   Meet links would quietly stop being created a week after setup. Published, the
-   token lasts until it is revoked. Publishing does not require Google's
-   verification review — the consent screen just shows an "unverified app"
-   warning, and the only person who ever sees it is whoever authorises it below.
+3. **Publish the app.** In the current console this lives under **APIs & Services
+   → OAuth consent screen**, which opens *Google Auth Platform*; then in the left
+   menu click **Audience**. Under *Publishing status: Testing* press
+   **PUBLISH APP** and confirm.
+
+   Do not skip this and do not leave it in Testing. A Testing app is locked to
+   accounts listed as test users, and everyone else — including the account that
+   owns the project — gets turned away at sign-in with:
+
+   > שגיאה 403: access_denied · האפליקציה נמצאת כרגע בבדיקה, ורק בודקים שאושרו
+   > על ידי המפתח יכולים לגשת אליה
+
+   And even a listed test user only gets a refresh token that **Google expires
+   after 7 days**, so Meet links would be created for a week and then quietly
+   stop. Publishing fixes both.
+
+   Publishing does **not** require Google's verification review. Because
+   `calendar.events` is a sensitive scope, the console warns that verification
+   will be needed — push to production anyway. Unverified simply means the
+   consent screen shows an "unverified app" warning and the app is capped at 100
+   users, and the only person who ever signs in here is the calendar's owner. At
+   that warning, click **Advanced → Go to swenllycalander (unsafe)** and carry on.
 
 Then pick one of the two routes to the token.
 
@@ -388,6 +403,15 @@ Check with `ls -la ~/swenlly/public/media`.
 
 **Out of disk after several deploys** — `docker system prune -af`.
 
+**`403: access_denied` when authorising Google, or Meet links that stop after a
+week** — the OAuth app is in *Testing*. Publish it: **APIs & Services → OAuth
+consent screen → Audience → PUBLISH APP**. See "Google Meet links" above for why
+adding yourself as a test user is not the fix.
+
+**Bookings confirmed with no Meet link** — check
+`curl -s https://swenlly.com/api/health` for `"googleMeet": false` (variables
+missing) and the logs for `[google] token refresh failed` (token revoked or
+expired; mint a new one).
 
 ---
 
