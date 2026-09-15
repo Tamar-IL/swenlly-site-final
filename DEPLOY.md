@@ -83,6 +83,13 @@ NOTIFY_EMAIL=info@swenlly.com
 TURNSTILE_SECRET=
 NEXT_PUBLIC_TURNSTILE_SITEKEY=
 
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REFRESH_TOKEN=
+GOOGLE_CALENDAR_ID=primary
+
+CRON_SECRET=
+
 SITE_URL=https://swenlly.com
 NODE_ENV=production
 ```
@@ -200,6 +207,176 @@ docker inspect swenlly-web -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}
 ```
 
 It should print the network named in `docker-compose.caddy.yml`, not `swenlly_swenlly`.
+## The meeting calendar
+
+`/booking` and the chat agent share one calendar. Slots are 30 minutes, 11:00–17:00
+and 20:00–23:00 Israel time, at least 14 hours ahead and at most two weeks out, and
+never on Shabbat, a yom tov, or the day before one. Shabbat is arithmetic; the
+holidays come from [Hebcal](https://www.hebcal.com/)'s public JSON API, cached for
+12 hours in the container. If the container ever cannot reach `www.hebcal.com`, the
+calendar falls back to blocking every Friday and Saturday and logs
+`[hebcal] request failed`, which would leave chagim bookable — so it is worth a
+check after a deploy:
+
+```bash
+docker compose exec web node -e "fetch('https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&i=on&start=2026-01-01&end=2026-01-31').then(r=>console.log(r.status))"
+```
+
+A meeting runs 30 minutes and is followed by a 15-minute break, so starts sit 45
+minutes apart: 11:00, 11:45, 12:30 … and 20:00, 20:45, 21:30, 22:15. Nothing can
+be booked inside another meeting's break, and **a day stops offering times once it
+holds 4 meetings** — cancelled ones do not count, so a cancellation reopens both
+the slot and the day.
+
+Two people cannot take the same time. Checking a slot and taking it runs under a
+per-day lock, so simultaneous requests queue instead of both reading "free" —
+eight at once for the same slot leave exactly one booking. The lock lives in the
+server process, and so does the store, so this assumes **one `web` container**,
+which is what `docker-compose.yml` runs. Scaling to two would need a shared store
+before it needed anything else.
+
+Booking a meeting sends the visitor a confirmation with an `.ics` invite, and sends
+`NOTIFY_EMAIL` the same details plus an AI brief on the business and search links
+for reading up on its field. Both need `RESEND_API_KEY`.
+
+## Google Meet links
+
+Each booking creates a Google Calendar event with a Meet conference, and the link
+goes into the confirmation, the reminder, the owner's copy and the `.ics`. All of
+it is optional: with the variables blank a meeting is still booked and confirmed,
+the email just says the call link will follow.
+
+**Which credentials.** An OAuth **refresh token** for the Google account whose
+calendar holds the meetings — not a service-account key. A service account can
+only mint Meet links by impersonating a real user through domain-wide delegation,
+which requires Google Workspace and an admin; a refresh token works on a plain
+Gmail account and is what `swenlly` needs.
+
+**Where they go.** Into the same `.env` on the server as everything else (step 3),
+or through GitHub secrets (section 6c) as `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` and `GOOGLE_CALENDAR_ID`.
+
+**Set up, once.** In [console.cloud.google.com](https://console.cloud.google.com):
+
+1. Create or pick a project.
+2. **APIs & Services → Library** → enable **Google Calendar API**.
+3. **Publish the app.** In the current console this lives under **APIs & Services
+   → OAuth consent screen**, which opens *Google Auth Platform*; then in the left
+   menu click **Audience**. Under *Publishing status: Testing* press
+   **PUBLISH APP** and confirm.
+
+   Do not skip this and do not leave it in Testing. A Testing app is locked to
+   accounts listed as test users, and everyone else — including the account that
+   owns the project — gets turned away at sign-in with:
+
+   > שגיאה 403: access_denied · האפליקציה נמצאת כרגע בבדיקה, ורק בודקים שאושרו
+   > על ידי המפתח יכולים לגשת אליה
+
+   And even a listed test user only gets a refresh token that **Google expires
+   after 7 days**, so Meet links would be created for a week and then quietly
+   stop. Publishing fixes both.
+
+   Publishing does **not** require Google's verification review. Because
+   `calendar.events` is a sensitive scope, the console warns that verification
+   will be needed — push to production anyway. Unverified simply means the
+   consent screen shows an "unverified app" warning and the app is capped at 100
+   users, and the only person who ever signs in here is the calendar's owner. At
+   that warning, click **Advanced → Go to swenllycalander (unsafe)** and carry on.
+
+Then pick one of the two routes to the token.
+
+### Route A — browser only, no terminal
+
+Use this if you do not have the code checked out on your machine.
+
+1. **Credentials → Create credentials → OAuth client ID → Web application.**
+   Under *Authorised redirect URIs* add exactly:
+   `https://developers.google.com/oauthplayground`
+   Copy the client ID and secret.
+2. Open [developers.google.com/oauthplayground](https://developers.google.com/oauthplayground).
+3. Click the **gear (⚙️)** at top right and set all four:
+   - **OAuth flow:** Server-side
+   - **Access type:** **Offline** — this is the one that decides whether a
+     refresh token exists at all. On *Online* you get an access token that dies
+     in an hour and nothing else.
+   - **Force prompt consent screen:** ticked
+   - **Use your own OAuth credentials:** ticked, then paste the client ID and
+     secret. Without this the token belongs to Google's demo client and will not
+     work with yours.
+4. In **Step 1**, ignore the list and type this scope into the box at the bottom:
+   `https://www.googleapis.com/auth/calendar.events`
+   → **Authorize APIs** → sign in as the account that owns the calendar and
+   approve (click *Advanced* → *Go to ... (unsafe)* past the unverified warning).
+5. Google sends you back to **Step 2** with an **Authorization code** filled in.
+   That is not the token — it is what you trade for one, it is single-use and it
+   expires in minutes. Click **Exchange authorization code for tokens**.
+6. The response panel now shows the **Refresh token** (it starts with `1//`).
+   That is the value for `GOOGLE_REFRESH_TOKEN`.
+
+Put it in `.env` with the client ID and secret.
+
+If the response comes back with an access token but **no** refresh token, it is
+one of two things: *Access type* was on Online, or this account already granted
+this client once. Set it to Offline, tick *Force prompt consent screen*, and if it
+still happens revoke the app at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions) and
+authorise again.
+
+### Route B — the script
+
+Use this if you have the repo checked out.
+
+1. **Credentials → Create credentials → OAuth client ID → Desktop app.** Copy the
+   client ID and secret. (Desktop app, not Web application — only that type
+   accepts the loopback redirect the script uses.)
+2. In a terminal, **change into the project folder first** — `npm run` only finds
+   scripts next to `package.json`, so running it from `C:\Users\You` gives
+   `Missing script: "google:token"`:
+
+   ```
+   cd path\to\swenlly-site-final
+   npm install
+   npm run google:token
+   ```
+
+   Run it exactly like that, with nothing before `npm`. A `VAR=value npm run ...`
+   prefix is bash syntax; PowerShell reads it as a command name and answers
+   `...googleusercontent.com is not recognized as the name of a cmdlet`.
+
+3. It asks for the client ID and secret, opens your browser, and catches Google's
+   redirect on `127.0.0.1` by itself — nothing to copy back. It then prints all
+   four lines ready to paste into `.env`:
+
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_REFRESH_TOKEN=...
+   GOOGLE_CALENDAR_ID=primary
+   ```
+
+Either route: put the values in `.env` and restart the container.
+
+`GOOGLE_CALENDAR_ID` is `primary` for that account's own calendar; use a calendar's
+ID from Google Calendar → Settings → *Integrate calendar* to book into a shared one
+instead. The only scope requested is `calendar.events`, so the token cannot read
+anything else in the account. A refresh token does not expire on its own, but it is
+revoked if the Google password changes or access is withdrawn at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions) — the
+symptom is `[google] token refresh failed` in the logs and bookings arriving
+without links. Re-run step 5 to fix it.
+
+An hour before each meeting, both sides get a reminder. The server sweeps for those
+every five minutes on its own, so nothing needs configuring. `/api/cron/reminders`
+runs the same sweep on demand if you would rather drive it from an external cron —
+set `CRON_SECRET` and send `Authorization: Bearer $CRON_SECRET`. A booking is only
+ever reminded once, whoever triggers the sweep.
+
+Without `AIRTABLE_API_KEY` the bookings live in the container's memory: fine for a
+single instance, but a restart forgets them, so booked slots reopen and pending
+reminders are lost. With Airtable, the `Bookings` table needs these fields:
+`name`, `phone`, `email`, `business`, `businessField`, `topic`, `slot`, `slotISO`,
+`locale`, `source`, `status`, `reminderSent` (checkbox), `createdAt`.
+
 ## 6c. Setting secrets without touching the server
 
 The Hetzner web console corrupts pasted text: underscores arrive as hyphens and
@@ -292,6 +469,15 @@ Check with `ls -la ~/swenlly/public/media`.
 
 **Out of disk after several deploys** — `docker system prune -af`.
 
+**`403: access_denied` when authorising Google, or Meet links that stop after a
+week** — the OAuth app is in *Testing*. Publish it: **APIs & Services → OAuth
+consent screen → Audience → PUBLISH APP**. See "Google Meet links" above for why
+adding yourself as a test user is not the fix.
+
+**Bookings confirmed with no Meet link** — check
+`curl -s https://swenlly.com/api/health` for `"googleMeet": false` (variables
+missing) and the logs for `[google] token refresh failed` (token revoked or
+expired; mint a new one).
 
 ---
 

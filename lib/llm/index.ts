@@ -1,5 +1,5 @@
-import { ChatMessage, runAnthropicAgent, anthropicConfigured } from "./anthropic";
-import { runOpenAIAgent, openaiConfigured } from "./openai";
+import { ChatMessage, runAnthropicAgent, anthropicConfigured, anthropicComplete } from "./anthropic";
+import { runOpenAIAgent, openaiConfigured, openaiComplete } from "./openai";
 
 export type { ChatMessage };
 
@@ -21,4 +21,20 @@ export async function runAgent(history: ChatMessage[], locale: string): Promise<
   return provider() === "openai"
     ? runOpenAIAgent(history, locale)
     : runAnthropicAgent(history, locale);
+}
+
+/**
+ * A single completion with no tools, on whichever provider is configured.
+ * Returns null when no key is set so callers can degrade instead of throwing.
+ */
+export async function complete(system: string, user: string): Promise<string | null> {
+  if (!agentConfigured()) return null;
+  try {
+    return provider() === "openai"
+      ? await openaiComplete(system, user)
+      : await anthropicComplete(system, user);
+  } catch (err) {
+    console.error("[llm] completion failed", err);
+    return null;
+  }
 }

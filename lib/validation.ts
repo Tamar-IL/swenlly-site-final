@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Israeli phone: 0xx-xxxxxxx or +972..., allow spaces/dashes; also allow "-" placeholder for newsletter.
 const phone = z
-  .string()
+  .string({ required_error: "נא למלא מספר טלפון" })
   .trim()
   .min(1, "נא למלא מספר טלפון")
   .max(30, "מספר הטלפון ארוך מדי")
@@ -15,18 +15,42 @@ export const leadSchema = z.object({
   message: z.string().trim().max(2000, "ההודעה ארוכה מדי — עד 2000 תווים").optional().or(z.literal("")),
   source: z.string().max(60).default("contact"),
   locale: z.string().max(10).default("he"),
+  // The visitor ticked the box. A form that only checks this in the browser is
+  // checking nothing, so the record is refused here too.
+  consent: z.literal(true, {
+    errorMap: () => ({ message: "כדי להמשיך, צריך לסמן את תיבת האישור." }),
+  }),
   turnstileToken: z.string().optional(),
   hp: z.string().optional(), // honeypot
 });
 export type LeadInput = z.infer<typeof leadSchema>;
 
 export const bookingSchema = z.object({
-  name: z.string().trim().min(1, "נא למלא שם").max(120, "השם ארוך מדי"),
+  name: z.string({ required_error: "נא למלא שם" }).trim().min(1, "נא למלא שם").max(120, "השם ארוך מדי"),
   phone,
-  email: z.string().trim().email("אימייל לא תקין").max(160, "האימייל ארוך מדי"),
-  slot: z.string().trim().min(1, "נא לבחור מועד").max(60, "המועד ארוך מדי"),
-  topic: z.string().trim().max(400, "הנושא ארוך מדי").optional().or(z.literal("")),
+  email: z
+    .string({ required_error: "נא למלא אימייל" })
+    .trim()
+    .email("אימייל לא תקין")
+    .max(160, "האימייל ארוך מדי"),
+  // A slot is a UTC instant, not a wall-clock string: the server re-derives the
+  // Israel time from it so a visitor in another timezone cannot shift a meeting.
+  slot: z.string({ required_error: "נא לבחור מועד מהיומן" }).trim().datetime({ message: "נא לבחור מועד מהיומן" }),
+  business: z
+    .string({ required_error: "נא למלא את שם העסק" })
+    .trim()
+    .min(1, "נא למלא את שם העסק")
+    .max(160, "שם העסק ארוך מדי"),
+  field: z.string().trim().max(120, "התחום ארוך מדי").optional().or(z.literal("")),
+  topic: z
+    .string({ required_error: "נא לכתוב על מה נדבר" })
+    .trim()
+    .min(1, "נא לכתוב על מה נדבר")
+    .max(400, "הנושא ארוך מדי"),
   locale: z.string().max(10).default("he"),
+  consent: z.literal(true, {
+    errorMap: () => ({ message: "כדי להמשיך, צריך לסמן את תיבת האישור." }),
+  }),
   turnstileToken: z.string().optional(),
   hp: z.string().optional(),
 });

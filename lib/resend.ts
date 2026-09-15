@@ -1,5 +1,11 @@
 // Resend email adapter. Gracefully no-ops (logs) when RESEND_API_KEY is absent.
 
+import type { Booking } from "./bookings-store";
+import { buildIcs } from "./ics";
+import { SLOT_MINUTES } from "./availability";
+
+const SITE = process.env.SITE_URL || "https://swenlly.com";
+
 const FROM = "swenlly <no-reply@swenlly.com>";
 const REPLY_TO = "info@swenlly.com";
 const NOTIFY = process.env.NOTIFY_EMAIL || "info@swenlly.com";
@@ -48,19 +54,207 @@ export function notifyLead(f: { name: string; phone: string; email?: string; mes
   });
 }
 
-export function notifyBooking(f: { name: string; phone: string; email: string; slot: string; topic?: string }) {
+// ── Booking emails ───────────────────────────────────────────────────────────
+
+
+function shell(title: string, body: string): string {
+  return `<div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;background:#f6f6f4;padding:24px">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e6e6e2;border-radius:16px;padding:26px">
+    <h2 style="margin:0 0 14px;font-size:20px;color:#1f1f1f">${esc(title)}</h2>
+    ${body}
+    <p style="margin-top:22px;font-size:12px;color:#8a8a84">סוונלי אוטומציות · <a href="${SITE}" style="color:#8a8a84">${SITE.replace(/^https?:\/\//, "")}</a></p>
+  </div>
+</div>`;
+}
+
+function row(label: string, value: string): string {
+  return `<p style="margin:6px 0;font-size:14.5px;color:#1f1f1f"><b>${esc(label)}:</b> ${esc(value)}</p>`;
+}
+
+function link(label: string, url: string): string {
+  return `<p style="margin:6px 0;font-size:14.5px;color:#1f1f1f"><b>${esc(label)}:</b> <a href="${esc(url)}" style="color:#1f6f5c">${esc(url)}</a></p>`;
+}
+
+function details(b: Booking): string {
+  return [
+    row("מועד", b.slotLabel),
+    row("משך", `${SLOT_MINUTES} דקות`),
+    b.meetLink ? link("קישור לפגישה (Google Meet)", b.meetLink) : "",
+    row("שם העסק", b.business),
+    b.field ? row("תחום", b.field) : "",
+    row("נושא השיחה", b.topic),
+    row("איש קשר", `${b.name} · ${b.phone} · ${b.email}`),
+  ].join("");
+}
+
+/** Where the client goes to move or cancel. The token IS the authorisation, so
+ *  it only ever travels to the address that booked the meeting — and to us. */
+export function manageUrl(b: Booking): string {
+  const locale = b.locale === "en" ? "en" : "he";
+  return `${SITE}/${locale}/booking/manage?t=${encodeURIComponent(b.token)}`;
+}
+
+function manageButtons(b: Booking): string {
+  const url = manageUrl(b);
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:20px">
+    <tr>
+      <td style="padding-inline-end:10px">
+        <a href="${esc(url)}&amp;a=move" style="display:inline-block;background:#1f1f1f;color:#fff;text-decoration:none;font-size:14px;padding:11px 18px;border-radius:999px">שינוי מועד</a>
+      </td>
+      <td>
+        <a href="${esc(url)}&amp;a=cancel" style="display:inline-block;background:#fff;color:#1f1f1f;border:1px solid #d8d8d2;text-decoration:none;font-size:14px;padding:11px 18px;border-radius:999px">ביטול הפגישה</a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin-top:10px;font-size:12px;color:#8a8a84">הקישורים אישיים — עדיף לא להעביר אותם הלאה.</p>`;
+}
+
+function icsAttachment(b: Booking) {
+  const ics = buildIcs({
+    uid: `${Date.parse(b.slotISO)}-${b.email}@swenlly.com`,
+    start: new Date(b.slotISO),
+    minutes: SLOT_MINUTES,
+    title: `שיחת ייעוץ · סוונלי ו${b.business || b.name}`,
+    description: b.topic || "שיחת ייעוץ",
+    organizerEmail: NOTIFY,
+    attendeeEmail: b.email,
+    meetLink: b.meetLink,
+  });
+  return {
+    filename: "swenlly-meeting.ics",
+    content: Buffer.from(ics, "utf8").toString("base64"),
+    content_type: "text/calendar; method=REQUEST",
+  };
+}
+
+/** Confirmation to the client, with the meeting as a calendar invite. */
+export function sendBookingConfirmation(b: Booking): Promise<boolean> {
+  return send({
+    from: FROM,
+    to: b.email,
+    reply_to: REPLY_TO,
+    subject: `הפגישה נקבעה · ${b.slotLabel}`,
+    html: shell(
+      "הפגישה נקבעה 🎉",
+      `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, קבענו. אלה הפרטים:</p>
+       ${details(b)}
+       <p style="margin-top:16px;font-size:14px;color:#4a4a45">${
+         b.meetLink
+           ? "השיחה היא בגוגל מיט — אפשר להצטרף מהקישור שלמעלה, והוא מחכה גם בהזמנה המצורפת ליומן."
+           : "נשלח את קישור השיחה לפני המועד."
+       } נשלח תזכורת שעה לפני.</p>
+       <p style="margin-top:16px;font-size:14px;color:#4a4a45">צריך לשנות מועד או לבטל? אפשר לעשות את זה לבד, כאן:</p>
+       ${manageButtons(b)}`
+    ),
+    attachments: [icsAttachment(b)],
+  });
+}
+
+/** The internal copy: same details, plus the AI brief and links to read up. */
+export function sendBookingBrief(
+  b: Booking,
+  brief: string | null,
+  links: { label: string; url: string }[]
+): Promise<boolean> {
+  const briefHtml = brief
+    ? `<h3 style="margin:22px 0 8px;font-size:16px;color:#1f1f1f">תדריך לקראת השיחה</h3>
+       <div style="font-size:14px;line-height:1.7;color:#1f1f1f;white-space:pre-wrap">${esc(brief)}</div>`
+    : `<p style="margin-top:20px;font-size:13px;color:#8a8a84">אין תדריך AI — לא מוגדר מפתח LLM בשרת.</p>`;
+  const linksHtml = links.length
+    ? `<h3 style="margin:22px 0 8px;font-size:16px;color:#1f1f1f">ללמוד על העסק והתחום</h3>
+       <ul style="padding-inline-start:18px;margin:0;font-size:14px;line-height:1.9">
+       ${links.map((l) => `<li><a href="${esc(l.url)}" style="color:#1f6f5c">${esc(l.label)}</a></li>`).join("")}
+       </ul>`
+    : "";
   return send({
     from: FROM,
     to: NOTIFY,
-    reply_to: f.email || REPLY_TO,
-    subject: `בקשת פגישה · ${esc(f.name)} · ${esc(f.slot)}`,
-    html: `<div dir="rtl" style="font-family:Arial">
-      <h2>בקשת פגישה חדשה</h2>
-      <p><b>שם:</b> ${esc(f.name)}</p>
-      <p><b>טלפון:</b> ${esc(f.phone)}</p>
-      <p><b>אימייל:</b> ${esc(f.email)}</p>
-      <p><b>מועד מבוקש:</b> ${esc(f.slot)}</p>
-      <p><b>נושא:</b> ${esc(f.topic || "-")}</p>
-    </div>`,
+    reply_to: b.email || REPLY_TO,
+    subject: `פגישה נקבעה · ${esc(b.business || b.name)} · ${esc(b.slotLabel)}`,
+    html: shell(
+      "פגישה חדשה ביומן",
+      `${details(b)}
+       ${row("נקבע דרך", b.source === "agent" ? "הסוכן החכם" : "טופס האתר")}
+       ${link("ניהול הפגישה (שינוי מועד / ביטול)", manageUrl(b))}
+       ${briefHtml}
+       ${linksHtml}`
+    ),
+    attachments: [icsAttachment(b)],
   });
+}
+
+/** The hour-before reminder. Same body, different address and opening line. */
+export function sendReminder(b: Booking, to: "client" | "owner"): Promise<boolean> {
+  const opening =
+    to === "client"
+      ? `היי ${esc(b.name)}, מזכירים — הפגישה שלנו מתחילה בעוד כשעה.`
+      : `תזכורת: פגישה עם ${esc(b.business || b.name)} בעוד כשעה.`;
+  return send({
+    from: FROM,
+    to: to === "client" ? b.email : NOTIFY,
+    reply_to: to === "client" ? REPLY_TO : b.email || REPLY_TO,
+    subject: `תזכורת · פגישה בעוד שעה · ${esc(b.slotLabel)}`,
+    html: shell(
+      "תזכורת לפגישה",
+      `<p style="font-size:14.5px;color:#1f1f1f">${opening}</p>${details(b)}${
+        to === "client" ? manageButtons(b) : link("ניהול הפגישה", manageUrl(b))
+      }`
+    ),
+  });
+}
+
+/** Both sides, after a meeting was moved. Carries the old time so nobody has to
+ *  dig through their inbox to work out what changed. */
+export async function sendRescheduled(b: Booking): Promise<boolean> {
+  const was = b.movedFrom ? `<p style="font-size:14px;color:#8a8a84">היה: ${esc(b.movedFrom)}</p>` : "";
+  const client = send({
+    from: FROM,
+    to: b.email,
+    reply_to: REPLY_TO,
+    subject: `המועד עודכן · ${b.slotLabel}`,
+    html: shell(
+      "המועד עודכן",
+      `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, הזזנו את הפגישה. אלה הפרטים החדשים:</p>
+       ${details(b)}${was}
+       <p style="margin-top:16px;font-size:14px;color:#4a4a45">${
+         b.meetLink ? "קישור השיחה לא השתנה — אותו קישור עובד גם במועד החדש." : ""
+       }</p>
+       ${manageButtons(b)}`
+    ),
+    attachments: [icsAttachment(b)],
+  });
+  const owner = send({
+    from: FROM,
+    to: NOTIFY,
+    reply_to: b.email || REPLY_TO,
+    subject: `מועד עודכן · ${esc(b.business || b.name)} · ${esc(b.slotLabel)}`,
+    html: shell("מועד עודכן", `${details(b)}${was}${link("ניהול הפגישה", manageUrl(b))}`),
+    attachments: [icsAttachment(b)],
+  });
+  const [a, c] = await Promise.all([client, owner]);
+  return a || c;
+}
+
+/** Both sides, after a meeting was cancelled. */
+export async function sendCancelled(b: Booking): Promise<boolean> {
+  const client = send({
+    from: FROM,
+    to: b.email,
+    reply_to: REPLY_TO,
+    subject: `הפגישה בוטלה · ${b.slotLabel}`,
+    html: shell(
+      "הפגישה בוטלה",
+      `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, ביטלנו את הפגישה שהייתה קבועה ל־${esc(b.slotLabel)}. לא נשלח יותר תזכורות.</p>
+       <p style="margin-top:16px;font-size:14px;color:#4a4a45">בכל שלב אפשר לקבוע מחדש: <a href="${esc(SITE)}/${b.locale === "en" ? "en" : "he"}/booking" style="color:#1f6f5c">${esc(SITE.replace(/^https?:\/\//, ""))}/booking</a></p>`
+    ),
+  });
+  const owner = send({
+    from: FROM,
+    to: NOTIFY,
+    reply_to: b.email || REPLY_TO,
+    subject: `פגישה בוטלה · ${esc(b.business || b.name)} · ${esc(b.slotLabel)}`,
+    html: shell("פגישה בוטלה", details(b)),
+  });
+  const [a, c] = await Promise.all([client, owner]);
+  return a || c;
 }

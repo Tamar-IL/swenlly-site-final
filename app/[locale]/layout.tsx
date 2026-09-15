@@ -7,6 +7,7 @@ import { ContentProvider } from "@/components/ContentProvider";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ChatWidget } from "@/components/widgets/ChatWidget";
+import { CookieBanner } from "@/components/widgets/CookieBanner";
 import { OrgJsonLd } from "@/components/JsonLd";
 
 const REVEAL_SCRIPT = "(function(){try{var d=document,e=d.querySelectorAll('.reveal');if(!e.length||!('IntersectionObserver' in window))return;var vh=window.innerHeight||d.documentElement.clientHeight,b=[],i,el;for(i=0;i<e.length;i++){el=e[i];if(el.getBoundingClientRect().top>vh*0.9){el.className+=' pending';b.push(el);}}if(!b.length)return;var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target);}});},{threshold:.08});for(i=0;i<b.length;i++)io.observe(b[i]);setTimeout(function(){for(var j=0;j<b.length;j++)b[j].classList.add('in');},4000);}catch(x){}})();";
@@ -80,6 +81,7 @@ export default async function LocaleLayout({
           <main>{children}</main>
           <Footer locale={locale} content={content} />
           <ChatWidget />
+          <CookieBanner />
           <OrgJsonLd />
         </ContentProvider>
         {/* Last thing in the body, so the DOM above is already parsed. It hides

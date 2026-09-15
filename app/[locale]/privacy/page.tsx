@@ -19,6 +19,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
       <PageIntro eyebrow={p.eyebrow} h1={p.h1} lead={p.lead} />
       <div className="bento reveal" style={{ marginTop: 8 }}>
         <div className="card c-full">
+          <p className="mono" style={{ fontSize: 11.5, color: "var(--tx4)", letterSpacing: ".04em" }}>{p.updated}</p>
           {p.sections.map((s, i) => (
             <div key={s.t} style={{ paddingBlock: 18, borderBottom: i < p.sections.length - 1 ? "1px solid var(--line)" : "none" }}>
               <div className="ttl" style={{ fontSize: 17 }}>{s.t}</div>

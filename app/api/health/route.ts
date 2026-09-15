@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureReminderLoop } from "@/lib/reminders";
 
 export const dynamic = "force-dynamic";
 
@@ -11,12 +12,22 @@ export const dynamic = "force-dynamic";
  * identical to a working setup until a lead goes missing.
  */
 export function GET() {
+  // Docker's HEALTHCHECK hits this every 30s, which makes it the one place
+  // guaranteed to run soon after a restart. Starting the reminder sweep here
+  // means meetings booked before the restart still get their hour-before email,
+  // even if nobody visits the site in between. It is idempotent.
+  ensureReminderLoop();
+
   const provider = (process.env.LLM_PROVIDER || "anthropic").toLowerCase().trim();
   const usingOpenAI = ["openai", "gpt", "chatgpt"].includes(provider);
 
   const airtable =
     !!process.env.AIRTABLE_API_KEY && !!process.env.AIRTABLE_BASE_ID;
   const resend = !!process.env.RESEND_API_KEY;
+  const google =
+    !!process.env.GOOGLE_CLIENT_ID &&
+    !!process.env.GOOGLE_CLIENT_SECRET &&
+    !!process.env.GOOGLE_REFRESH_TOKEN;
 
   // The question this endpoint exists to answer: if someone submits the contact
   // form right now, does it reach anyone?
@@ -34,6 +45,8 @@ export function GET() {
       // the usual cause is a hyphen or a space in the variable name.
       notifyEmailFromEnv: !!process.env.NOTIFY_EMAIL,
       turnstile: !!process.env.TURNSTILE_SECRET,
+      // false means bookings are confirmed without a Google Meet link.
+      googleMeet: google,
     },
     agent: {
       provider: usingOpenAI ? "openai" : "anthropic",

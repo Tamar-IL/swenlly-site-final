@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useContent } from "./ContentProvider";
 import { Turnstile, type TurnstileHandle } from "./Turnstile";
 
@@ -44,6 +45,7 @@ export function LeadForm() {
           message: fd.get("message"),
           source: "contact",
           locale,
+          consent: true,
           turnstileToken: token ?? undefined,
         }),
       });
@@ -92,7 +94,12 @@ export function LeadForm() {
           /* accentColor recolours the native tick — the browser default is blue */
           style={{ marginTop: 2, width: 18, height: 18, cursor: "pointer", flexShrink: 0, accentColor: "var(--green)" }}
         />
-        <label htmlFor="lf-consent" style={{ cursor: "pointer", fontSize: 14 }}>{f.consent}</label>
+        <label htmlFor="lf-consent" style={{ cursor: "pointer", fontSize: 14 }}>
+          {f.consent}{" "}
+          <Link href={`/${locale}/privacy`} className="consentlink">
+            {content.consent.policyLink}
+          </Link>
+        </label>
       </div>
       <Turnstile locale={locale} onToken={setToken} onReady={(h) => (captcha.current = h)} />
       <input className="hp" type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" />

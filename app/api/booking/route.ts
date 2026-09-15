@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { bookingSchema } from "@/lib/validation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
-import { createRecord } from "@/lib/airtable";
-import { notifyBooking } from "@/lib/resend";
+import { createBooking } from "@/lib/booking-service";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const ip = clientIp(req);
@@ -33,36 +34,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "אימות האבטחה נכשל. אפשר לרענן את הדף ולנסות שוב." }, { status: 400 });
   }
 
-  const result = await createRecord("Bookings", {
+  const result = await createBooking({
+    slot: data.slot,
     name: data.name,
     phone: data.phone,
     email: data.email,
-    slot: data.slot,
-    topic: data.topic || "",
+    business: data.business,
+    field: data.field || "",
+    topic: data.topic,
     locale: data.locale,
-    status: "Pending",
-    createdAt: new Date().toISOString(),
-  });
-  const mailed = await notifyBooking({
-    name: data.name,
-    phone: data.phone,
-    email: data.email,
-    slot: data.slot,
-    topic: data.topic || undefined,
+    source: "site",
   });
 
-  if (!result.ok && !mailed) {
-    console.error("[booking] LOST — Airtable and email both failed", {
-      airtable: result.ok,
-      email: mailed,
-      name: data.name,
-      phone: data.phone,
-    });
-    return NextResponse.json(
-      { ok: false, error: "לא הצלחנו לקלוט את הבקשה. אפשר לכתוב לנו בוואטסאפ ונתאם מועד." },
-      { status: 502 }
-    );
+  if (!result.ok) {
+    // A slot that was taken or is out of range is the visitor's to fix (409);
+    // a storage or mail failure is ours (502).
+    const status = result.reason === "delivery" ? 502 : 409;
+    return NextResponse.json({ ok: false, error: result.error, reason: result.reason }, { status });
   }
 
-  return NextResponse.json({ ok: true, bookingId: result.id });
+  return NextResponse.json({
+    ok: true,
+    bookingId: result.booking.id,
+    slotLabel: result.booking.slotLabel,
+    // Whether a Meet link exists, not the link itself: the link belongs in the
+    // confirmation email, not in a response anyone could replay.
+    meet: !!result.booking.meetLink,
+  });
 }

@@ -68,3 +68,19 @@ export async function runAnthropicAgent(
 
   return "סליחה, נתקעתי רגע. אפשר לנסח מחדש או לפנות אלינו בוואטסאפ.";
 }
+
+/** One-shot completion, no tools. Used for the internal business brief. */
+export async function anthropicComplete(system: string, user: string): Promise<string> {
+  const client = new Anthropic();
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 900,
+    system,
+    messages: [{ role: "user", content: user }],
+  });
+  return response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+}
