@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useContent } from "./ContentProvider";
+import { Turnstile, type TurnstileHandle } from "./Turnstile";
 
 export function LeadForm() {
   const { content, locale } = useContent();
   const f = content.contact.form;
   const [state, setState] = useState<"idle" | "sending" | "ok" | "err">("idle");
   const [msg, setMsg] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const captcha = useRef<TurnstileHandle | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,6 +44,7 @@ export function LeadForm() {
           message: fd.get("message"),
           source: "contact",
           locale,
+          turnstileToken: token ?? undefined,
         }),
       });
       const data = await res.json();
@@ -48,13 +52,16 @@ export function LeadForm() {
         setState("ok");
         setMsg(f.ok);
         form.reset();
+        captcha.current?.reset();
       } else {
         setState("err");
         setMsg(data.error || f.err);
+        captcha.current?.reset();   // the token is spent either way
       }
     } catch {
       setState("err");
       setMsg(f.err);
+      captcha.current?.reset();
     }
   }
 
@@ -87,6 +94,7 @@ export function LeadForm() {
         />
         <label htmlFor="lf-consent" style={{ cursor: "pointer", fontSize: 14 }}>{f.consent}</label>
       </div>
+      <Turnstile locale={locale} onToken={setToken} onReady={(h) => (captcha.current = h)} />
       <input className="hp" type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" />
       <button className="btn" type="submit" disabled={state === "sending"} style={{ marginTop: 20, width: "100%" }}>
         {state === "sending" ? f.sending : f.submit}

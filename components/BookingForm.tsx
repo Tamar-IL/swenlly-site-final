@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useContent } from "./ContentProvider";
+import { Turnstile, type TurnstileHandle } from "./Turnstile";
 
 export function BookingForm() {
   const { content, locale } = useContent();
   const f = content.booking.form;
   const [state, setState] = useState<"idle" | "sending" | "ok" | "err">("idle");
   const [msg, setMsg] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const captcha = useRef<TurnstileHandle | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -26,6 +29,7 @@ export function BookingForm() {
           slot: fd.get("slot"),
           topic: fd.get("topic"),
           locale,
+          turnstileToken: token ?? undefined,
         }),
       });
       const data = await res.json();
@@ -33,13 +37,16 @@ export function BookingForm() {
         setState("ok");
         setMsg(f.ok);
         form.reset();
+        captcha.current?.reset();
       } else {
         setState("err");
         setMsg(data.error || f.err);
+        captcha.current?.reset();
       }
     } catch {
       setState("err");
       setMsg(f.err);
+      captcha.current?.reset();
     }
   }
 
@@ -65,6 +72,7 @@ export function BookingForm() {
         <label htmlFor="bf-topic">{f.topic}</label>
         <input id="bf-topic" name="topic" />
       </div>
+      <Turnstile locale={locale} onToken={setToken} onReady={(h) => (captcha.current = h)} />
       <input className="hp" type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" />
       <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         <button className="pill pill-w" type="submit" disabled={state === "sending"}>
