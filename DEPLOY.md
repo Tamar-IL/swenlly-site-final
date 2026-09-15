@@ -234,23 +234,64 @@ Gmail account and is what `swenlly` needs.
 or through GitHub secrets (section 6c) as `GOOGLE_CLIENT_ID`,
 `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` and `GOOGLE_CALENDAR_ID`.
 
-**How to create them**, once:
+**Set up, once.** In [console.cloud.google.com](https://console.cloud.google.com):
 
-1. [console.cloud.google.com](https://console.cloud.google.com) → create or pick a project.
+1. Create or pick a project.
 2. **APIs & Services → Library** → enable **Google Calendar API**.
-3. **OAuth consent screen** → *External*, and add the swenlly Google account under
-   **Test users**. It never needs Google's verification review: the app stays in
-   testing and only that one account ever signs in.
-4. **Credentials → Create credentials → OAuth client ID → Desktop app.** Copy the
-   client ID and secret.
-5. On your own machine, in a checkout of this repo, run:
+3. **APIs & Services → OAuth consent screen** → *External* → and then
+   **PUBLISH IT** (Publishing status: *In production*). This matters: while the
+   app sits in *Testing*, Google **expires the refresh token after 7 days**, so
+   Meet links would quietly stop being created a week after setup. Published, the
+   token lasts until it is revoked. Publishing does not require Google's
+   verification review — the consent screen just shows an "unverified app"
+   warning, and the only person who ever sees it is whoever authorises it below.
+
+Then pick one of the two routes to the token.
+
+### Route A — browser only, no terminal
+
+Use this if you do not have the code checked out on your machine.
+
+1. **Credentials → Create credentials → OAuth client ID → Web application.**
+   Under *Authorised redirect URIs* add exactly:
+   `https://developers.google.com/oauthplayground`
+   Copy the client ID and secret.
+2. Open [developers.google.com/oauthplayground](https://developers.google.com/oauthplayground).
+3. Click the **gear (⚙️)** at top right → tick **Use your own OAuth credentials**
+   → paste the client ID and secret.
+4. In **Step 1**, ignore the list and type this scope into the box at the bottom:
+   `https://www.googleapis.com/auth/calendar.events`
+   → **Authorize APIs** → sign in as the account that owns the calendar and
+   approve (click *Advanced* → *Go to ... (unsafe)* past the unverified warning).
+5. In **Step 2**, click **Exchange authorization code for tokens**.
+   The **Refresh token** is shown right there in the response panel.
+
+Put it in `.env` with the client ID and secret.
+
+### Route B — the script
+
+Use this if you have the repo checked out.
+
+1. **Credentials → Create credentials → OAuth client ID → Desktop app.** Copy the
+   client ID and secret. (Desktop app, not Web application — only that type
+   accepts the loopback redirect the script uses.)
+2. In a terminal, **change into the project folder first** — `npm run` only finds
+   scripts next to `package.json`, so running it from `C:\Users\You` gives
+   `Missing script: "google:token"`:
 
    ```
+   cd path\to\swenlly-site-final
+   npm install
    npm run google:token
    ```
 
-   It asks for the client ID and secret, prints a URL to open, and takes the code
-   Google shows you. Then it prints all four lines ready to paste into `.env`:
+   Run it exactly like that, with nothing before `npm`. A `VAR=value npm run ...`
+   prefix is bash syntax; PowerShell reads it as a command name and answers
+   `...googleusercontent.com is not recognized as the name of a cmdlet`.
+
+3. It asks for the client ID and secret, opens your browser, and catches Google's
+   redirect on `127.0.0.1` by itself — nothing to copy back. It then prints all
+   four lines ready to paste into `.env`:
 
    ```
    GOOGLE_CLIENT_ID=...
@@ -259,12 +300,7 @@ or through GitHub secrets (section 6c) as `GOOGLE_CLIENT_ID`,
    GOOGLE_CALENDAR_ID=primary
    ```
 
-   Run it exactly as written — no `VAR=value` prefix. That form is bash syntax and
-   PowerShell reads it as a command name, which is why
-   `...googleusercontent.com is not recognized as the name of a cmdlet` comes back.
-   The script prompts instead, so it behaves the same in PowerShell, cmd and bash.
-
-   Put the four lines in `.env` and restart the container.
+Either route: put the values in `.env` and restart the container.
 
 `GOOGLE_CALENDAR_ID` is `primary` for that account's own calendar; use a calendar's
 ID from Google Calendar → Settings → *Integrate calendar* to book into a shared one
