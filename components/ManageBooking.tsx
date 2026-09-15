@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useContent } from "./ContentProvider";
+import { SlotCalendar, type Day } from "./SlotCalendar";
 
-type Slot = { iso: string; time: string };
-type Day = { day: string; label: string; slots: Slot[] };
 type Meeting = {
   slotISO: string;
   slotLabel: string;
@@ -174,54 +173,33 @@ export function ManageBooking() {
               <h3 className="bookstep-t">{m.moveTitle}</h3>
               <p className="formnote">{m.moveIntro}</p>
 
-              {days.length === 0 ? (
-                <p className="formstatus err">{cal.empty}</p>
-              ) : (
-                <>
-                  <div className="fld">
-                    <label htmlFor="mb-days">{cal.day}</label>
-                    <div className="chiprow" id="mb-days" role="group" aria-label={cal.day}>
-                      {days.map((d) => (
-                        <button
-                          key={d.day}
-                          type="button"
-                          className={`chip ${d.day === dayKey ? "on" : ""}`}
-                          aria-pressed={d.day === dayKey}
-                          onClick={() => {
-                            setDayKey(d.day);
-                            setSlot("");
-                          }}
-                        >
-                          {d.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="fld">
-                    <label htmlFor="mb-times">{cal.time}</label>
-                    <div className="chiprow" id="mb-times" role="group" aria-label={cal.time}>
-                      {(day?.slots || []).map((s) => (
-                        <button
-                          key={s.iso}
-                          type="button"
-                          className={`chip ${s.iso === slot ? "on" : ""}`}
-                          aria-pressed={s.iso === slot}
-                          onClick={() => setSlot(s.iso)}
-                        >
-                          {s.time}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="pill pill-w"
-                    disabled={!slot || busy}
-                    onClick={() => act({ action: "reschedule", slot }, m.moved)}
-                  >
-                    {busy ? m.moving : m.moveConfirm}
-                  </button>
-                </>
+              <SlotCalendar
+                days={days}
+                daySelected={dayKey}
+                onSelectDay={(d) => {
+                  setDayKey(d);
+                  setSlot("");
+                }}
+                slotSelected={slot}
+                onSelectSlot={setSlot}
+                locale={locale}
+                labels={{
+                  day: cal.day,
+                  time: cal.time,
+                  noSlots: cal.empty,
+                  prev: cal.prev,
+                  next: cal.next,
+                }}
+              />
+              {days.length > 0 && (
+                <button
+                  type="button"
+                  className="pill pill-w"
+                  disabled={!slot || busy}
+                  onClick={() => act({ action: "reschedule", slot }, m.moved)}
+                >
+                  {busy ? m.moving : m.moveConfirm}
+                </button>
               )}
               <p className="formnote">{cal.rules}</p>
             </section>

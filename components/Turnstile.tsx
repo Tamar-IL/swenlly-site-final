@@ -68,7 +68,7 @@ export function Turnstile({
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY;
   const boxRef = useRef<HTMLDivElement | null>(null);
   const widgetId = useRef<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
 
   // Kept in refs so the mount effect does not re-run when a parent re-renders
   // and hands us a new function identity — that would tear down the widget.
@@ -98,14 +98,21 @@ export function Turnstile({
           callback: (token: string) => onTokenRef.current(token),
           // A token is single-use and expires; clear it so a stale one is never sent.
           "expired-callback": () => onTokenRef.current(null),
-          "error-callback": () => {
+          // Cloudflare passes a numeric code here and it is the only signal
+          // that says WHY. 110200 = this domain is not on the sitekey's allowed
+          // list, which is the usual cause on a freshly pointed domain.
+          "error-callback": (code?: string) => {
             onTokenRef.current(null);
-            setFailed(true);
+            console.error("[turnstile] widget error", code ?? "(no code)");
+            setFailed(code ? String(code) : "widget");
           },
         });
         onReadyRef.current?.({ reset });
       })
-      .catch(() => setFailed(true));
+      .catch((err) => {
+        console.error("[turnstile] script failed to load", err);
+        setFailed("script");
+      });
 
     return () => {
       cancelled = true;
@@ -123,7 +130,13 @@ export function Turnstile({
       <div ref={boxRef} />
       {failed && (
         <span className="formstatus err" style={{ marginTop: 8 }}>
-          לא הצלחנו לטעון את בדיקת האבטחה. אפשר לרענן את הדף, או לכתוב לנו בוואטסאפ.
+          לא הצלחנו לטעון את בדיקת האבטחה. אפשר לרענן את הדף, או לכתוב לנו בוואטסאפ.{" "}
+          {/* The code is what makes this fixable rather than mysterious — it
+              tells whoever is debugging whether the domain, the key or the
+              network is at fault. Small and muted; nobody else needs it. */}
+          <span className="mono" style={{ opacity: 0.6, fontSize: 11 }}>
+            ({failed})
+          </span>
         </span>
       )}
     </div>

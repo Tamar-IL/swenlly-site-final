@@ -423,6 +423,34 @@ input[type="checkbox"]{color-scheme:dark;accent-color:var(--green)}
 .cookiebar-btns{display:flex;gap:10px;flex-wrap:wrap}
 @media(max-width:640px){.cookiebar-btns{width:100%}.cookiebar-btns .pill{flex:1}}
 
+/* booking calendar — a real month grid, square cells */
+.cal{display:flex;flex-direction:column;gap:12px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cal-title{font-family:var(--disp);font-weight:700;color:var(--tx);font-size:15.5px}
+.cal-nav{width:34px;height:34px;flex:none;border-radius:10px;background:var(--card);
+ border:1px solid var(--line2);color:var(--tx2);font-size:19px;line-height:1;cursor:pointer;
+ display:flex;align-items:center;justify-content:center;transition:border-color .18s,color .18s}
+.cal-nav:hover:not(:disabled){border-color:var(--tx3);color:var(--tx)}
+.cal-nav:disabled{opacity:.3;cursor:default}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-dow{text-align:center;font-family:var(--sans);font-size:11.5px;color:var(--tx4);
+ padding-bottom:2px}
+.cal-pad{aspect-ratio:1}
+.cal-day{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+ border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--tx2);
+ font-family:var(--sans);font-size:14px;cursor:pointer;padding:0;
+ transition:border-color .18s,background .18s,color .18s}
+.cal-day.free:hover{border-color:var(--green);color:var(--tx)}
+/* A day with nothing open is not a button you failed to press — it reads as
+   absent rather than as rejected. */
+.cal-day.off{opacity:.28;cursor:default;border-color:transparent;background:transparent}
+.cal-day.on{background:var(--green);border-color:var(--green);color:#0a0d07;font-weight:700}
+.cal-n{line-height:1}
+.cal-dot{position:absolute;bottom:6px;width:4px;height:4px;border-radius:999px;background:var(--green)}
+.cal-day.on .cal-dot{background:#0a0d07;opacity:.55}
+@media(max-width:420px){.cal-grid{gap:4px}.cal-day{border-radius:9px;font-size:13px}}
+
 /* booking calendar */
 .bookstep{display:flex;flex-direction:column;gap:14px;padding:18px;border:1px solid var(--line);
  border-radius:16px;background:var(--card2)}
