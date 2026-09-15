@@ -23,8 +23,16 @@ services:
       # .dockerignore keeps public/media out of the image, so the video has to be
       # bind-mounted in — same as docker-compose.yml does.
       - ./public/media:/app/public/media:ro
+      # Booked meetings. This IS the record, and deploy.sh rebuilds and recreates
+      # this container on every release, so without the volume every booking
+      # would be destroyed by the next deploy. Same volume name as
+      # docker-compose.yml, so switching stacks keeps the data.
+      - bookings:/app/data
     networks:
       - caddy
+
+volumes:
+  bookings:
 
 networks:
   caddy:

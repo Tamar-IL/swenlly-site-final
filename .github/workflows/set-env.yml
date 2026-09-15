@@ -21,6 +21,10 @@ on:
         type: choice
         options: ["", "true", "false"]
         default: ""
+      rebuild:
+        description: "Rebuild the image. REQUIRED for NEXT_PUBLIC_* values, which are compiled in at build time."
+        type: boolean
+        default: false
 
 concurrency:
   group: production-deploy
@@ -40,6 +44,7 @@ jobs:
           SSH_USER: ${{ secrets.DEPLOY_USER }}
           SSH_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          REBUILD: ${{ inputs.rebuild }}
           # Every value below is optional. A secret left unset is skipped, so the
           # server keeps whatever it already has for that key.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -50,6 +55,7 @@ jobs:
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          NEXT_PUBLIC_TURNSTILE_SITEKEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITEKEY }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
@@ -82,6 +88,7 @@ jobs:
           add AIRTABLE_API_KEY  "${AIRTABLE_API_KEY:-}"
           add AIRTABLE_BASE_ID  "${AIRTABLE_BASE_ID:-}"
           add TURNSTILE_SECRET  "${TURNSTILE_SECRET:-}"
+          add NEXT_PUBLIC_TURNSTILE_SITEKEY "${NEXT_PUBLIC_TURNSTILE_SITEKEY:-}"
           add GOOGLE_CLIENT_ID     "${GOOGLE_CLIENT_ID:-}"
           add GOOGLE_CLIENT_SECRET "${GOOGLE_CLIENT_SECRET:-}"
           add GOOGLE_REFRESH_TOKEN "${GOOGLE_REFRESH_TOKEN:-}"
@@ -112,7 +119,8 @@ jobs:
           scp $SSHOPTS -P "$SSH_PORT" scripts/apply-env.sh "$SSH_USER@$SSH_HOST:/tmp/apply-env.sh"
           rm -f "$frag"
 
-          ssh $SSHOPTS -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -s <<'REMOTE'
+          ssh $SSHOPTS -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+              "REBUILD='${REBUILD:-false}' bash -s" <<'REMOTE'
           set -euo pipefail
           cd ~/swenlly
           install -m 755 /tmp/apply-env.sh scripts/apply-env.sh
@@ -123,6 +131,12 @@ jobs:
           # Compose reads env_file at container CREATION, so a restart would bring
           # the old values straight back. Recreate instead. No rebuild needed —
           # only the environment changed, not the image.
+          if [ "${REBUILD:-false}" = "true" ]; then
+            # NEXT_PUBLIC_* is read from .env as a build arg and inlined into the
+            # bundle, so it only takes effect after an image rebuild.
+            echo "==> Rebuilding image (NEXT_PUBLIC_* values need this)"
+            docker compose -f docker-compose.caddy.yml build web
+          fi
           echo "==> Recreating container"
           docker compose -f docker-compose.caddy.yml up -d --force-recreate web
 

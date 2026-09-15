@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useContent } from "./ContentProvider";
+import { Turnstile, type TurnstileHandle } from "./Turnstile";
 
 export function NewsletterForm() {
   const { content, locale } = useContent();
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const captcha = useRef<TurnstileHandle | null>(null);
   const [state, setState] = useState<"idle" | "sending" | "ok" | "err">("idle");
   const [msg, setMsg] = useState("");
 
@@ -41,12 +44,16 @@ export function NewsletterForm() {
           source: "newsletter",
           locale,
           consent: true,
+          // Without this /api/lead rejects the signup outright whenever
+          // TURNSTILE_SECRET is set — the widget is not decoration.
+          turnstileToken: token ?? undefined,
         }),
       });
       const data = await res.json();
       if (!data.ok) {
         setState("err");
         setMsg(data.error || content.consent.err);
+        captcha.current?.reset();
         return;
       }
     } catch {
@@ -56,6 +63,8 @@ export function NewsletterForm() {
     setMsg("");
     setEmail("");
     setConsent(false);
+    // A token is single-use, so re-arm the widget for the next signup.
+    captcha.current?.reset();
   }
 
   return (
@@ -93,6 +102,8 @@ export function NewsletterForm() {
           </Link>
         </span>
       </label>
+
+      <Turnstile locale={locale} onToken={setToken} onReady={(h) => (captcha.current = h)} />
 
       {state === "err" && msg && <span className="formstatus err">{msg}</span>}
     </form>

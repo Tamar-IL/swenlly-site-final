@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useContent } from "./ContentProvider";
+import { Turnstile, type TurnstileHandle } from "./Turnstile";
 
 type Slot = { iso: string; time: string };
 type Day = { day: string; label: string; slots: Slot[] };
@@ -20,6 +21,8 @@ export function BookingForm() {
   const [slot, setSlot] = useState<string>("");
   const [state, setState] = useState<"idle" | "sending" | "ok" | "err">("idle");
   const [msg, setMsg] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const captcha = useRef<TurnstileHandle | null>(null);
 
   // The calendar is what the server says is open right now, not a static grid:
   // the 14-hour notice, the two-week horizon and every Shabbat and chag are
@@ -81,6 +84,7 @@ export function BookingForm() {
           email: fd.get("email"),
           locale,
           consent: true,
+          turnstileToken: token ?? undefined,
         }),
       });
       const data = await res.json();
@@ -98,13 +102,18 @@ export function BookingForm() {
             .filter((d) => d.slots.length)
         );
         setSlot("");
+        // A Turnstile token is single-use, so the widget has to be re-armed
+        // before this form can be submitted again.
+        captcha.current?.reset();
       } else {
         setState("err");
         setMsg(data.error || f.err);
+        captcha.current?.reset();
       }
     } catch {
       setState("err");
       setMsg(f.err);
+      captcha.current?.reset();
     }
   }
 
@@ -199,6 +208,7 @@ export function BookingForm() {
         </span>
       </label>
 
+      <Turnstile locale={locale} onToken={setToken} onReady={(h) => (captcha.current = h)} />
       <input className="hp" type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" />
 
       <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>

@@ -185,6 +185,28 @@ setting having no effect.
 | `certbot/conf/`  | Certificates. **Back this up.** Gitignored                  |
 | `public/media/`  | Videos, bind-mounted into the container. Gitignored          |
 
+## 6b. If the site returns 502
+
+Almost always caused by running a bare `docker compose` command. Without `-f`,
+Compose picks `docker-compose.yml`, which starts nginx on ports 80/443 — but this
+server already runs Caddy there. nginx fails to bind, and `swenlly-web` is left on
+a network Caddy cannot reach, so every request 502s.
+
+Recover with:
+
+```bash
+cd ~/swenlly
+docker compose -f docker-compose.yml down   # remove the wrong stack
+./scripts/deploy.sh                          # bring it back on the Caddy network
+```
+
+Confirm the container is on Caddy's network again:
+
+```bash
+docker inspect swenlly-web -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+```
+
+It should print the network named in `docker-compose.caddy.yml`, not `swenlly_swenlly`.
 ## The meeting calendar
 
 `/booking` and the chat agent share one calendar. Slots are 30 minutes, 11:00–17:00
@@ -386,6 +408,33 @@ five most recent backups are kept.
 
 This path also works when SSH from your own machine does not — the workflow runs
 from GitHub's network, not yours.
+
+---
+
+## 6d. Turning on Turnstile (bot protection for the forms)
+
+The contact and booking forms verify a Cloudflare Turnstile token server-side.
+Until keys are configured the check is skipped, so the only spam defence is the
+honeypot field.
+
+1. At dash.cloudflare.com -> Turnstile, add a widget for `swenlly.com`. You get a
+   **site key** (public) and a **secret key** (private).
+2. Add both as repository secrets, named exactly:
+   - `NEXT_PUBLIC_TURNSTILE_SITEKEY`
+   - `TURNSTILE_SECRET`
+3. Actions -> Update server environment -> Run workflow, and **tick `rebuild`**.
+
+Step 3's tick matters. `NEXT_PUBLIC_*` values are not read at runtime — Next.js
+compiles them into the browser bundle, so the site key only takes effect after
+the image is rebuilt. Recreating the container is not enough, and skipping the
+rebuild leaves the widget invisible while the server starts rejecting every
+submission for a missing token.
+
+Confirm with `curl -s https://swenlly.com/api/health` — `turnstile` should be
+`true` — and then submit the contact form yourself before considering it done.
+
+To turn it off again, delete both secrets from the server's `.env` and redeploy;
+`verifyTurnstile` returns true when no secret is set.
 
 ---
 
