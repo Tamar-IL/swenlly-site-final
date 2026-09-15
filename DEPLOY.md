@@ -272,16 +272,33 @@ Use this if you do not have the code checked out on your machine.
    `https://developers.google.com/oauthplayground`
    Copy the client ID and secret.
 2. Open [developers.google.com/oauthplayground](https://developers.google.com/oauthplayground).
-3. Click the **gear (⚙️)** at top right → tick **Use your own OAuth credentials**
-   → paste the client ID and secret.
+3. Click the **gear (⚙️)** at top right and set all four:
+   - **OAuth flow:** Server-side
+   - **Access type:** **Offline** — this is the one that decides whether a
+     refresh token exists at all. On *Online* you get an access token that dies
+     in an hour and nothing else.
+   - **Force prompt consent screen:** ticked
+   - **Use your own OAuth credentials:** ticked, then paste the client ID and
+     secret. Without this the token belongs to Google's demo client and will not
+     work with yours.
 4. In **Step 1**, ignore the list and type this scope into the box at the bottom:
    `https://www.googleapis.com/auth/calendar.events`
    → **Authorize APIs** → sign in as the account that owns the calendar and
    approve (click *Advanced* → *Go to ... (unsafe)* past the unverified warning).
-5. In **Step 2**, click **Exchange authorization code for tokens**.
-   The **Refresh token** is shown right there in the response panel.
+5. Google sends you back to **Step 2** with an **Authorization code** filled in.
+   That is not the token — it is what you trade for one, it is single-use and it
+   expires in minutes. Click **Exchange authorization code for tokens**.
+6. The response panel now shows the **Refresh token** (it starts with `1//`).
+   That is the value for `GOOGLE_REFRESH_TOKEN`.
 
 Put it in `.env` with the client ID and secret.
+
+If the response comes back with an access token but **no** refresh token, it is
+one of two things: *Access type* was on Online, or this account already granted
+this client once. Set it to Offline, tick *Force prompt consent screen*, and if it
+still happens revoke the app at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions) and
+authorise again.
 
 ### Route B — the script
 
