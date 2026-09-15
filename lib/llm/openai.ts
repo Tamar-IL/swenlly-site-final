@@ -97,3 +97,17 @@ export async function runOpenAIAgent(
 
   return "סליחה, נתקעתי רגע. אפשר לנסח מחדש או לפנות אלינו בוואטסאפ.";
 }
+
+/** One-shot completion, no tools. Used for the internal business brief. */
+export async function openaiComplete(system: string, user: string): Promise<string> {
+  const client = new OpenAI();
+  const response = await client.chat.completions.create({
+    model: MODEL,
+    max_completion_tokens: 900,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  });
+  return (response.choices[0]?.message?.content ?? "").trim();
+}

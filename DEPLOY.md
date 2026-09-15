@@ -83,6 +83,8 @@ NOTIFY_EMAIL=info@swenlly.com
 TURNSTILE_SECRET=
 NEXT_PUBLIC_TURNSTILE_SITEKEY=
 
+CRON_SECRET=
+
 SITE_URL=https://swenlly.com
 NODE_ENV=production
 ```
@@ -177,6 +179,36 @@ setting having no effect.
 | `nginx/active/`  | What nginx actually reads; written by the scripts, gitignored |
 | `certbot/conf/`  | Certificates. **Back this up.** Gitignored                  |
 | `public/media/`  | Videos, bind-mounted into the container. Gitignored          |
+
+## The meeting calendar
+
+`/booking` and the chat agent share one calendar. Slots are 30 minutes, 11:00–17:00
+and 20:00–23:00 Israel time, at least 14 hours ahead and at most two weeks out, and
+never on Shabbat, a yom tov, or the day before one. Shabbat is arithmetic; the
+holidays come from [Hebcal](https://www.hebcal.com/)'s public JSON API, cached for
+12 hours in the container. **The container must be able to reach `www.hebcal.com`**
+— if it cannot, the calendar falls back to blocking every Friday and Saturday and
+logs `[hebcal] request failed`, so chagim would be bookable. Check after a deploy:
+
+```bash
+docker compose exec web node -e "fetch('https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&i=on&start=2026-01-01&end=2026-01-31').then(r=>console.log(r.status))"
+```
+
+Booking a meeting sends the visitor a confirmation with an `.ics` invite, and sends
+`NOTIFY_EMAIL` the same details plus an AI brief on the business and search links
+for reading up on its field. Both need `RESEND_API_KEY`.
+
+An hour before each meeting, both sides get a reminder. The server sweeps for those
+every five minutes on its own, so nothing needs configuring. `/api/cron/reminders`
+runs the same sweep on demand if you would rather drive it from an external cron —
+set `CRON_SECRET` and send `Authorization: Bearer $CRON_SECRET`. A booking is only
+ever reminded once, whoever triggers the sweep.
+
+Without `AIRTABLE_API_KEY` the bookings live in the container's memory: fine for a
+single instance, but a restart forgets them, so booked slots reopen and pending
+reminders are lost. With Airtable, the `Bookings` table needs these fields:
+`name`, `phone`, `email`, `business`, `businessField`, `topic`, `slot`, `slotISO`,
+`locale`, `source`, `status`, `reminderSent` (checkbox), `createdAt`.
 
 ## 6c. Setting secrets without touching the server
 

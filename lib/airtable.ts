@@ -45,3 +45,57 @@ export async function createRecord(
     return { ok: false };
   }
 }
+
+export type AirtableRecord = { id: string; fields: Record<string, unknown> };
+
+/** Reads records from a table. `filterByFormula` is Airtable's own syntax. */
+export async function listRecords(
+  table: string,
+  opts: { filterByFormula?: string; maxRecords?: number; fields?: string[] } = {}
+): Promise<{ ok: boolean; records: AirtableRecord[]; skipped?: boolean }> {
+  const cfg = config();
+  if (!cfg) return { ok: false, records: [], skipped: true };
+  const params = new URLSearchParams();
+  if (opts.filterByFormula) params.set("filterByFormula", opts.filterByFormula);
+  params.set("maxRecords", String(opts.maxRecords ?? 100));
+  for (const f of opts.fields || []) params.append("fields[]", f);
+  try {
+    const res = await fetch(`${API}/${cfg.base}/${encodeURIComponent(table)}?${params}`, {
+      headers: { Authorization: `Bearer ${cfg.key}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error(`[airtable] ${table} read failed`, res.status, await res.text());
+      return { ok: false, records: [] };
+    }
+    const data = (await res.json()) as { records: AirtableRecord[] };
+    return { ok: true, records: data.records || [] };
+  } catch (err) {
+    console.error(`[airtable] ${table} read error`, err);
+    return { ok: false, records: [] };
+  }
+}
+
+export async function updateRecord(
+  table: string,
+  id: string,
+  fields: Record<string, unknown>
+): Promise<{ ok: boolean; skipped?: boolean }> {
+  const cfg = config();
+  if (!cfg) return { ok: false, skipped: true };
+  try {
+    const res = await fetch(`${API}/${cfg.base}/${encodeURIComponent(table)}/${id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${cfg.key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ fields, typecast: true }),
+    });
+    if (!res.ok) {
+      console.error(`[airtable] ${table} update failed`, res.status, await res.text());
+      return { ok: false };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error(`[airtable] ${table} update error`, err);
+    return { ok: false };
+  }
+}
