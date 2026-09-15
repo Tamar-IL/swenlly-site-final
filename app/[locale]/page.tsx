@@ -145,7 +145,7 @@ export default async function HomePage({
           in the same box as the one that books it. */}
       <div className="keepintouch reveal">
         <div>
-          <div className="kt-t">{h.news.t}</div>
+          <div className="kt-t lat">{h.news.t}</div>
           <p className="kt-s">{h.news.s}</p>
         </div>
         <NewsletterForm />

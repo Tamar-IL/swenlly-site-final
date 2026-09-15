@@ -455,8 +455,10 @@ input[type="checkbox"]{color-scheme:dark;accent-color:var(--green)}
 .keepintouch{max-width:var(--maxw);margin:42px auto 0;padding:26px;border:1px solid var(--line);
  border-radius:20px;background:var(--card);display:flex;align-items:center;gap:26px;flex-wrap:wrap;
  justify-content:space-between}
-.kt-t{font-family:var(--disp);font-weight:700;color:var(--tx);font-size:19px}
-.kt-s{font-family:var(--sans);font-size:13.5px;color:var(--tx3);line-height:1.7;margin-top:6px;max-width:52ch}
+/* Set large, as the block's own mark rather than a small label. */
+.kt-t{font-family:var(--disp);font-weight:700;color:var(--tx);font-size:clamp(28px,4.4vw,40px);
+ line-height:1.05;letter-spacing:-.02em}
+.kt-s{font-family:var(--sans);font-size:14px;color:var(--tx2);line-height:1.7;margin-top:10px;max-width:52ch}
 .keepintouch .news{min-width:min(330px,100%)}
 @media(max-width:720px){.keepintouch{padding:22px}}
 
