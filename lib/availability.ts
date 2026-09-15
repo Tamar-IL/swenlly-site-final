@@ -10,7 +10,13 @@ export const WINDOWS: { from: [number, number]; to: [number, number] }[] = [
   { from: [11, 0], to: [17, 0] },
   { from: [20, 0], to: [23, 0] },
 ];
+/** How long a meeting itself runs. */
 export const SLOT_MINUTES = 30;
+/** Quiet time after every meeting. Nothing may start inside it, so starts sit
+ *  on a SLOT_MINUTES + BREAK_MINUTES grid from the top of each window. */
+export const BREAK_MINUTES = 15;
+/** Distance between two consecutive starts. */
+export const STEP_MINUTES = SLOT_MINUTES + BREAK_MINUTES;
 /** A meeting must be at least this far from the moment it is booked. */
 export const MIN_LEAD_HOURS = 14;
 /** And no further ahead than this. */
@@ -51,7 +57,9 @@ function slotsOfDay(date: Date): Date[] {
   for (const win of WINDOWS) {
     const startMin = win.from[0] * 60 + win.from[1];
     const endMin = win.to[0] * 60 + win.to[1];
-    for (let m = startMin; m + SLOT_MINUTES <= endMin; m += SLOT_MINUTES) {
+    // The break only has to fit between two meetings, not after the last one,
+    // so the window has room for a meeting that ends exactly at its close.
+    for (let m = startMin; m + SLOT_MINUTES <= endMin; m += STEP_MINUTES) {
       out.push(fromWall(w.year, w.month, w.day, Math.floor(m / 60), m % 60));
     }
   }
@@ -61,12 +69,20 @@ function slotsOfDay(date: Date): Date[] {
 function withinWindows(date: Date): boolean {
   const w = wallOf(date);
   const minutes = w.hour * 60 + w.minute;
-  if (minutes % SLOT_MINUTES !== 0) return false;
   return WINDOWS.some((win) => {
     const s = win.from[0] * 60 + win.from[1];
     const e = win.to[0] * 60 + win.to[1];
-    return minutes >= s && minutes + SLOT_MINUTES <= e;
+    if (minutes < s || minutes + SLOT_MINUTES > e) return false;
+    // On the grid, not merely inside the window: an off-grid start would eat
+    // into the break around its neighbours.
+    return (minutes - s) % STEP_MINUTES === 0;
   });
+}
+
+/** Two meetings clash when the gap between their starts leaves no room for the
+ *  meeting plus its break. Used everywhere instead of comparing exact starts. */
+export function clashes(aStartMs: number, bStartMs: number): boolean {
+  return Math.abs(aStartMs - bStartMs) < STEP_MINUTES * 60_000;
 }
 
 /**
@@ -75,7 +91,12 @@ function withinWindows(date: Date): boolean {
 export async function availableDays(now = new Date(), locale = "he"): Promise<Day[]> {
   const first = earliestStart(now);
   const last = latestStart(now);
-  const taken = await takenSlots(first, last);
+  // Pad the lookup: a meeting just outside the window still blocks the slot at
+  // its edge, because the break reaches across the boundary.
+  const taken = await takenSlots(
+    new Date(first.getTime() - STEP_MINUTES * 60_000),
+    new Date(last.getTime() + STEP_MINUTES * 60_000)
+  );
   const days: Day[] = [];
 
   for (let i = 0; i <= HORIZON_DAYS; i++) {
@@ -83,7 +104,7 @@ export async function availableDays(now = new Date(), locale = "he"): Promise<Da
     if (await dayBlock(date, now, HORIZON_DAYS)) continue;
     const slots = slotsOfDay(date)
       .filter((s) => s.getTime() >= first.getTime() && s.getTime() <= last.getTime())
-      .filter((s) => !taken.has(s.toISOString()))
+      .filter((s) => !taken.some((t) => clashes(t, s.getTime())))
       .map((s) => ({ iso: s.toISOString(), time: hhmm(s) }));
     if (slots.length) days.push({ day: dayKey(date), label: formatDayLabel(date, locale), slots });
   }
@@ -122,17 +143,22 @@ export async function checkSlot(iso: string, now = new Date(), locale = "he"): P
     return {
       ok: false,
       reason: "outside-hours",
+      // Naming only the windows would confuse someone who asked for 11:30 —
+      // that IS inside them; what it is not is on the grid the break creates.
       message:
         locale === "en"
-          ? "Meeting hours are 11:00–17:00 and 20:00–23:00 (Israel time)."
-          : "שעות הפגישות הן 11:00–17:00 ו־20:00–23:00 (שעון ישראל).",
+          ? `Meetings run ${SLOT_MINUTES} minutes with a ${BREAK_MINUTES}-minute break after each one, so they start every ${STEP_MINUTES} minutes from 11:00 and from 20:00 (Israel time). Please pick a time from the calendar.`
+          : `הפגישות הן ${SLOT_MINUTES} דקות עם ${BREAK_MINUTES} דקות הפסקה אחרי כל אחת, ולכן הן מתחילות כל ${STEP_MINUTES} דקות מ־11:00 ומ־20:00 (שעון ישראל). אפשר לבחור מועד מהיומן.`,
     };
   }
   const block = await dayBlock(slot, now, HORIZON_DAYS);
   if (block) return { ok: false, reason: "blocked", message: blockedMessage(block, locale) };
 
-  const taken = await takenSlots(new Date(slot.getTime() - 1000), new Date(slot.getTime() + 1000));
-  if (taken.has(slot.toISOString())) {
+  const taken = await takenSlots(
+    new Date(slot.getTime() - STEP_MINUTES * 60_000),
+    new Date(slot.getTime() + STEP_MINUTES * 60_000)
+  );
+  if (taken.some((t) => clashes(t, slot.getTime()))) {
     return {
       ok: false,
       reason: "taken",

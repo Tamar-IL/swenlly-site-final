@@ -71,10 +71,15 @@ function row(label: string, value: string): string {
   return `<p style="margin:6px 0;font-size:14.5px;color:#1f1f1f"><b>${esc(label)}:</b> ${esc(value)}</p>`;
 }
 
+function link(label: string, url: string): string {
+  return `<p style="margin:6px 0;font-size:14.5px;color:#1f1f1f"><b>${esc(label)}:</b> <a href="${esc(url)}" style="color:#1f6f5c">${esc(url)}</a></p>`;
+}
+
 function details(b: Booking): string {
   return [
     row("מועד", b.slotLabel),
     row("משך", `${SLOT_MINUTES} דקות`),
+    b.meetLink ? link("קישור לפגישה (Google Meet)", b.meetLink) : "",
     row("שם העסק", b.business),
     b.field ? row("תחום", b.field) : "",
     row("נושא השיחה", b.topic),
@@ -91,6 +96,7 @@ function icsAttachment(b: Booking) {
     description: b.topic || "שיחת ייעוץ",
     organizerEmail: NOTIFY,
     attendeeEmail: b.email,
+    meetLink: b.meetLink,
   });
   return {
     filename: "swenlly-meeting.ics",
@@ -110,7 +116,11 @@ export function sendBookingConfirmation(b: Booking): Promise<boolean> {
       "הפגישה נקבעה 🎉",
       `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, קבענו. אלה הפרטים:</p>
        ${details(b)}
-       <p style="margin-top:16px;font-size:14px;color:#4a4a45">נשלח תזכורת שעה לפני. צריך לשנות מועד? אפשר פשוט להשיב למייל הזה.</p>`
+       <p style="margin-top:16px;font-size:14px;color:#4a4a45">${
+         b.meetLink
+           ? "השיחה היא בגוגל מיט — אפשר להצטרף מהקישור שלמעלה, והוא מחכה גם בהזמנה המצורפת ליומן."
+           : "נשלח את קישור השיחה לפני המועד."
+       } נשלח תזכורת שעה לפני. צריך לשנות מועד? אפשר פשוט להשיב למייל הזה.</p>`
     ),
     attachments: [icsAttachment(b)],
   });

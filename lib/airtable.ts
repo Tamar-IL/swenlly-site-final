@@ -99,3 +99,22 @@ export async function updateRecord(
     return { ok: false };
   }
 }
+
+export async function deleteRecord(table: string, id: string): Promise<{ ok: boolean; skipped?: boolean }> {
+  const cfg = config();
+  if (!cfg) return { ok: false, skipped: true };
+  try {
+    const res = await fetch(`${API}/${cfg.base}/${encodeURIComponent(table)}/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${cfg.key}` },
+    });
+    if (!res.ok) {
+      console.error(`[airtable] ${table} delete failed`, res.status, await res.text());
+      return { ok: false };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error(`[airtable] ${table} delete error`, err);
+    return { ok: false };
+  }
+}

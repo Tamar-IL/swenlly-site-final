@@ -83,6 +83,11 @@ NOTIFY_EMAIL=info@swenlly.com
 TURNSTILE_SECRET=
 NEXT_PUBLIC_TURNSTILE_SITEKEY=
 
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REFRESH_TOKEN=
+GOOGLE_CALENDAR_ID=primary
+
 CRON_SECRET=
 
 SITE_URL=https://swenlly.com
@@ -194,9 +199,65 @@ logs `[hebcal] request failed`, so chagim would be bookable. Check after a deplo
 docker compose exec web node -e "fetch('https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&i=on&start=2026-01-01&end=2026-01-31').then(r=>console.log(r.status))"
 ```
 
+A meeting runs 30 minutes and is followed by a 15-minute break, so starts sit 45
+minutes apart: 11:00, 11:45, 12:30 … and 20:00, 20:45, 21:30, 22:15. Nothing can
+be booked inside another meeting's break.
+
+Two people cannot take the same time. Checking and taking a slot runs under a
+per-day lock inside the server, so simultaneous requests queue instead of both
+reading "free"; and because a second instance would not share that lock, every
+booking is re-checked against the store immediately after it is written — the
+earliest `createdAt` keeps the slot, and the loser is deleted along with its
+calendar event before any confirmation goes out.
+
 Booking a meeting sends the visitor a confirmation with an `.ics` invite, and sends
 `NOTIFY_EMAIL` the same details plus an AI brief on the business and search links
 for reading up on its field. Both need `RESEND_API_KEY`.
+
+## Google Meet links
+
+Each booking creates a Google Calendar event with a Meet conference, and the link
+goes into the confirmation, the reminder, the owner's copy and the `.ics`. All of
+it is optional: with the variables blank a meeting is still booked and confirmed,
+the email just says the call link will follow.
+
+**Which credentials.** An OAuth **refresh token** for the Google account whose
+calendar holds the meetings — not a service-account key. A service account can
+only mint Meet links by impersonating a real user through domain-wide delegation,
+which requires Google Workspace and an admin; a refresh token works on a plain
+Gmail account and is what `swenlly` needs.
+
+**Where they go.** Into the same `.env` on the server as everything else (step 3),
+or through GitHub secrets (section 6c) as `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` and `GOOGLE_CALENDAR_ID`.
+
+**How to create them**, once:
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → create or pick a project.
+2. **APIs & Services → Library** → enable **Google Calendar API**.
+3. **OAuth consent screen** → *External*, and add the swenlly Google account under
+   **Test users**. It never needs Google's verification review: the app stays in
+   testing and only that one account ever signs in.
+4. **Credentials → Create credentials → OAuth client ID → Desktop app.** Copy the
+   client ID and secret.
+5. On your own machine, in a checkout of this repo:
+
+   ```bash
+   GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... npm run google:token
+   ```
+
+   Open the URL it prints, approve as the calendar's account, paste the code back,
+   and it prints `GOOGLE_REFRESH_TOKEN=...`. Put all four values in `.env` and
+   restart the container.
+
+`GOOGLE_CALENDAR_ID` is `primary` for that account's own calendar; use a calendar's
+ID from Google Calendar → Settings → *Integrate calendar* to book into a shared one
+instead. The only scope requested is `calendar.events`, so the token cannot read
+anything else in the account. A refresh token does not expire on its own, but it is
+revoked if the Google password changes or access is withdrawn at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions) — the
+symptom is `[google] token refresh failed` in the logs and bookings arriving
+without links. Re-run step 5 to fix it.
 
 An hour before each meeting, both sides get a reminder. The server sweeps for those
 every five minutes on its own, so nothing needs configuring. `/api/cron/reminders`

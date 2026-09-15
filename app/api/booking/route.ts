@@ -57,5 +57,8 @@ export async function POST(req: Request) {
     ok: true,
     bookingId: result.booking.id,
     slotLabel: result.booking.slotLabel,
+    // Whether a Meet link exists, not the link itself: the link belongs in the
+    // confirmation email, not in a response anyone could replay.
+    meet: !!result.booking.meetLink,
   });
 }

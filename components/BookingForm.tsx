@@ -86,7 +86,9 @@ export function BookingForm() {
       const data = await res.json();
       if (data.ok) {
         setState("ok");
-        setMsg(data.slotLabel ? `${f.ok} (${data.slotLabel})` : f.ok);
+        // Only promise a call link when one was actually created.
+        const done = data.meet ? f.okMeet : f.ok;
+        setMsg(data.slotLabel ? `${done} (${data.slotLabel})` : done);
         form.reset();
         // The slot we just took is gone from the calendar — drop it rather than
         // leave a button that would now be refused.

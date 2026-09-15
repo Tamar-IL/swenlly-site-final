@@ -5,7 +5,7 @@
 // to send a reminder — so every booking is also kept in memory for as long as
 // the container lives. Reads merge both.
 
-import { createRecord, listRecords, updateRecord, airtableConfigured } from "./airtable";
+import { createRecord, listRecords, updateRecord, deleteRecord, airtableConfigured } from "./airtable";
 
 export type Booking = {
   id?: string;
@@ -23,6 +23,10 @@ export type Booking = {
   source: "site" | "agent";
   createdAt: string;
   reminderSent?: boolean;
+  /** Google Meet URL, when a calendar event was created for this meeting. */
+  meetLink?: string;
+  /** The Google Calendar event id, so a losing booking can clean up after itself. */
+  googleEventId?: string;
 };
 
 const TABLE = "Bookings";
@@ -51,6 +55,8 @@ function toFields(b: Booking): Record<string, unknown> {
     source: b.source,
     status: "Confirmed",
     reminderSent: false,
+    meetLink: b.meetLink || "",
+    googleEventId: b.googleEventId || "",
     createdAt: b.createdAt,
   };
 }
@@ -72,6 +78,8 @@ function fromFields(id: string, f: Record<string, unknown>): Booking | null {
     source: (String(f.source || "site") === "agent" ? "agent" : "site"),
     createdAt: String(f.createdAt || ""),
     reminderSent: f.reminderSent === true,
+    meetLink: String(f.meetLink || ""),
+    googleEventId: String(f.googleEventId || ""),
   };
 }
 
@@ -85,13 +93,17 @@ export async function saveBooking(b: Booking): Promise<{ ok: boolean; id?: strin
   return { ok: result.ok || !airtableConfigured(), id: result.id };
 }
 
-/** Every slot already taken in [from, to]. */
-export async function takenSlots(from: Date, to: Date): Promise<Set<string>> {
+/**
+ * Start times of every meeting already booked in [from, to], as epoch ms.
+ * Starts rather than a set of exact slots, because a neighbouring meeting
+ * blocks a slot through its break without sharing its start.
+ */
+export async function takenSlots(from: Date, to: Date): Promise<number[]> {
   prune();
-  const taken = new Set<string>();
+  const taken = new Set<number>();
   for (const b of memory.values()) {
     const t = Date.parse(b.slotISO);
-    if (t >= from.getTime() && t <= to.getTime()) taken.add(b.slotISO);
+    if (t >= from.getTime() && t <= to.getTime()) taken.add(t);
   }
   const res = await listRecords(TABLE, {
     filterByFormula: `AND({slotISO} >= '${from.toISOString()}', {slotISO} <= '${to.toISOString()}')`,
@@ -100,9 +112,42 @@ export async function takenSlots(from: Date, to: Date): Promise<Set<string>> {
   });
   for (const r of res.records) {
     const iso = r.fields.slotISO;
-    if (typeof iso === "string" && iso) taken.add(iso);
+    const t = typeof iso === "string" ? Date.parse(iso) : NaN;
+    if (Number.isFinite(t)) taken.add(t);
   }
-  return taken;
+  return [...taken];
+}
+
+/**
+ * Bookings in [from, to] as full records, newest write last. Used to settle a
+ * race: whoever has the earliest createdAt keeps the slot.
+ */
+export async function bookingsInRange(from: Date, to: Date): Promise<Booking[]> {
+  prune();
+  // Keyed by record id, not by slot: two records CAN share a slot — that is
+  // exactly the collision the caller is looking for, and keying by slot would
+  // hide it by collapsing them into one.
+  const found = new Map<string, Booking>();
+  const key = (b: Booking) => b.id || `mem:${b.slotISO}`;
+  for (const b of memory.values()) {
+    const t = Date.parse(b.slotISO);
+    if (t >= from.getTime() && t <= to.getTime()) found.set(key(b), b);
+  }
+  const res = await listRecords(TABLE, {
+    filterByFormula: `AND({slotISO} >= '${from.toISOString()}', {slotISO} <= '${to.toISOString()}')`,
+    maxRecords: 100,
+  });
+  for (const r of res.records) {
+    const b = fromFields(r.id, r.fields);
+    if (b) found.set(key(b), b);
+  }
+  return [...found.values()];
+}
+
+/** Removes a booking that lost a race. Best effort — it must never throw. */
+export async function dropBooking(b: Booking): Promise<void> {
+  memory.delete(b.slotISO);
+  if (b.id) await deleteRecord(TABLE, b.id);
 }
 
 /** Bookings starting inside [from, to] that have not had their reminder sent. */

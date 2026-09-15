@@ -50,6 +50,11 @@ jobs:
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
           LLM_PROVIDER: ${{ inputs.llm_provider }}
           COMING_SOON: ${{ inputs.coming_soon }}
         run: |
@@ -77,6 +82,11 @@ jobs:
           add AIRTABLE_API_KEY  "${AIRTABLE_API_KEY:-}"
           add AIRTABLE_BASE_ID  "${AIRTABLE_BASE_ID:-}"
           add TURNSTILE_SECRET  "${TURNSTILE_SECRET:-}"
+          add GOOGLE_CLIENT_ID     "${GOOGLE_CLIENT_ID:-}"
+          add GOOGLE_CLIENT_SECRET "${GOOGLE_CLIENT_SECRET:-}"
+          add GOOGLE_REFRESH_TOKEN "${GOOGLE_REFRESH_TOKEN:-}"
+          add GOOGLE_CALENDAR_ID   "${GOOGLE_CALENDAR_ID:-}"
+          add CRON_SECRET       "${CRON_SECRET:-}"
           add LLM_PROVIDER      "${LLM_PROVIDER:-}"
           add COMING_SOON       "${COMING_SOON:-}"
 

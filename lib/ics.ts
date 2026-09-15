@@ -30,6 +30,8 @@ export function buildIcs(opts: {
   description: string;
   organizerEmail: string;
   attendeeEmail: string;
+  /** Google Meet URL, when there is one. Becomes the event's location. */
+  meetLink?: string;
 }): string {
   const end = new Date(opts.start.getTime() + opts.minutes * 60_000);
   const lines = [
@@ -44,7 +46,11 @@ export function buildIcs(opts: {
     `DTSTART:${stamp(opts.start)}`,
     `DTEND:${stamp(end)}`,
     `SUMMARY:${escape(opts.title)}`,
-    `DESCRIPTION:${escape(opts.description)}`,
+    `DESCRIPTION:${escape(
+      opts.meetLink ? `${opts.description}\n\nקישור לפגישה: ${opts.meetLink}` : opts.description
+    )}`,
+    // LOCATION is what calendar apps turn into a join button.
+    ...(opts.meetLink ? [`LOCATION:${escape(opts.meetLink)}`] : []),
     `ORGANIZER;CN=swenlly:mailto:${opts.organizerEmail}`,
     `ATTENDEE;CN=${escape(opts.attendeeEmail)};RSVP=TRUE:mailto:${opts.attendeeEmail}`,
     "BEGIN:VALARM",

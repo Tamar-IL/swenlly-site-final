@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
-import { availableDays, MIN_LEAD_HOURS, HORIZON_DAYS, SLOT_MINUTES } from "@/lib/availability";
+import { availableDays, MIN_LEAD_HOURS, HORIZON_DAYS, SLOT_MINUTES, BREAK_MINUTES } from "@/lib/availability";
 import { isLocale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,12 @@ export async function GET(req: Request) {
     return NextResponse.json({
       ok: true,
       days,
-      rules: { minLeadHours: MIN_LEAD_HOURS, horizonDays: HORIZON_DAYS, slotMinutes: SLOT_MINUTES },
+      rules: {
+        minLeadHours: MIN_LEAD_HOURS,
+        horizonDays: HORIZON_DAYS,
+        slotMinutes: SLOT_MINUTES,
+        breakMinutes: BREAK_MINUTES,
+      },
     });
   } catch (err) {
     console.error("[availability] failed", err);

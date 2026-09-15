@@ -1,7 +1,7 @@
 import { createRecord } from "../airtable";
 import { notifyLead } from "../resend";
 import { getPricing } from "./pricing-data";
-import { availableDays, MIN_LEAD_HOURS, HORIZON_DAYS, SLOT_MINUTES } from "../availability";
+import { availableDays, MIN_LEAD_HOURS, HORIZON_DAYS, SLOT_MINUTES, BREAK_MINUTES } from "../availability";
 import { createBooking } from "../booking-service";
 
 export type ToolDef = {
@@ -35,7 +35,7 @@ export const TOOLS: ToolDef[] = [
     description:
       `Get the real open meeting slots from swenlly's calendar. Call this BEFORE offering any time — never guess or invent one. ` +
       `Returns days with a list of slots; each slot has an "iso" value you must pass verbatim to book_meeting, and a "time" for showing the visitor. ` +
-      `Slots already honour every rule: ${MIN_LEAD_HOURS}h minimum notice, up to ${HORIZON_DAYS} days ahead, 11:00-17:00 and 20:00-23:00 Israel time, and never on Shabbat, a holiday or the day before one.`,
+      `Slots already honour every rule: ${MIN_LEAD_HOURS}h minimum notice, up to ${HORIZON_DAYS} days ahead, 11:00-17:00 and 20:00-23:00 Israel time, a ${BREAK_MINUTES}-minute break after each meeting, and never on Shabbat, a holiday or the day before one.`,
     input_schema: {
       type: "object",
       properties: {
@@ -49,7 +49,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "book_meeting",
     description:
-      "Actually book the meeting in swenlly's calendar and send the confirmation emails. This performs the booking — do not claim a meeting is booked unless this tool returned success. " +
+      "Actually book the meeting in swenlly's calendar, create its Google Meet link and send the confirmation emails. This performs the booking — do not claim a meeting is booked unless this tool returned success. " +
       "Collect every required field from the visitor first; do not invent any of them. slot_iso must be copied exactly from get_availability.",
     input_schema: {
       type: "object",
@@ -132,7 +132,13 @@ export async function runTool(
       if (!result.ok) {
         return `FAILED — nothing was booked. Reason: ${result.error} Tell the visitor exactly this, call get_availability again and offer a different time.`;
       }
-      return `BOOKED. The meeting is in the calendar for ${result.booking.slotLabel} and a confirmation email was sent to ${result.booking.email}. Tell the visitor the date and time, and that a confirmation is on its way.`;
+      return (
+        `BOOKED. The meeting is in the calendar for ${result.booking.slotLabel} and a confirmation email was sent to ${result.booking.email}. ` +
+        (result.booking.meetLink
+          ? "A Google Meet link was created and is in that email. Do not paste the link into the chat — tell the visitor it is in their inbox."
+          : "No Meet link was created this time; the email says the call link will follow.") +
+        " Tell the visitor the date and time, and that a confirmation is on its way."
+      );
     }
 
     if (name === "capture_lead") {
