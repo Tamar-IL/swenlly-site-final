@@ -514,6 +514,19 @@ rm scripts/apply-env.sh     # git has the canonical copy
 
 Confirm the server is on the right commit afterwards: `git -C ~/swenlly log --oneline -1`.
 
+**"לא הצלחנו לטעון את בדיקת האבטחה" on the forms.** Turnstile failed to
+render. The message now carries the code in brackets, and the browser console
+logs `[turnstile] widget error <code>`:
+
+| Code | Meaning |
+|------|---------|
+| `110200` | This hostname is not on the sitekey's allowed-domains list in Cloudflare. Add `swenlly.com` to the widget under Cloudflare → Turnstile. |
+| `script` | The browser could not load `challenges.cloudflare.com` at all — an extension, a blocker, or the network. |
+| `400020` / `600010` | The sitekey is wrong or does not belong to this account. Check `NEXT_PUBLIC_TURNSTILE_SITEKEY`. |
+
+Remember the sitekey is baked in at **build** time, so changing it needs
+`./scripts/deploy.sh`, not just a container restart.
+
 **`403: access_denied` when authorising Google, or Meet links that stop after a
 week** — the OAuth app is in *Testing*. Publish it: **APIs & Services → OAuth
 consent screen → Audience → PUBLISH APP**. See "Google Meet links" above for why

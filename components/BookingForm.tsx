@@ -4,9 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useContent } from "./ContentProvider";
 import { Turnstile, type TurnstileHandle } from "./Turnstile";
+import { SlotCalendar, type Day } from "./SlotCalendar";
 
-type Slot = { iso: string; time: string };
-type Day = { day: string; label: string; slots: Slot[] };
 type CalendarState = "loading" | "ready" | "empty" | "error";
 
 export function BookingForm() {
@@ -128,42 +127,24 @@ export function BookingForm() {
 
         {calState === "ready" && (
           <>
-            <div className="fld">
-              <label htmlFor="bf-days">{cal.day}</label>
-              <div className="chiprow" id="bf-days" role="group" aria-label={cal.day}>
-                {days.map((d) => (
-                  <button
-                    key={d.day}
-                    type="button"
-                    className={`chip ${d.day === dayKey ? "on" : ""}`}
-                    aria-pressed={d.day === dayKey}
-                    onClick={() => {
-                      setDayKey(d.day);
-                      setSlot("");
-                    }}
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="fld">
-              <label htmlFor="bf-times">{cal.time}</label>
-              <div className="chiprow" id="bf-times" role="group" aria-label={cal.time}>
-                {(day?.slots || []).map((s) => (
-                  <button
-                    key={s.iso}
-                    type="button"
-                    className={`chip ${s.iso === slot ? "on" : ""}`}
-                    aria-pressed={s.iso === slot}
-                    onClick={() => setSlot(s.iso)}
-                  >
-                    {s.time}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <SlotCalendar
+              days={days}
+              daySelected={dayKey}
+              onSelectDay={(d) => {
+                setDayKey(d);
+                setSlot("");
+              }}
+              slotSelected={slot}
+              onSelectSlot={setSlot}
+              locale={locale}
+              labels={{
+                day: cal.day,
+                time: cal.time,
+                noSlots: cal.empty,
+                prev: cal.prev,
+                next: cal.next,
+              }}
+            />
 
             {chosen && (
               <p className="chosenslot">
