@@ -200,6 +200,37 @@ docker inspect swenlly-web -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}
 ```
 
 It should print the network named in `docker-compose.caddy.yml`, not `swenlly_swenlly`.
+## 6c. Setting secrets without touching the server
+
+The Hetzner web console corrupts pasted text: underscores arrive as hyphens and
+Shift is dropped from symbols, so `sk-proj-Ab_c` pastes as `SK-PROJ-AB-C`. An API
+key pasted there is silently wrong, and an env var named `NOTIFY-EMAIL` is
+silently ignored. Typing by hand works; pasting does not.
+
+Pasting into GitHub's browser UI works correctly, so put the value there instead
+and let a workflow carry it to the server byte-exact:
+
+1. **Settings -> Secrets and variables -> Actions -> New repository secret.**
+   Name it exactly as it appears in `.env` (`OPENAI_API_KEY`, `NOTIFY_EMAIL`,
+   `RESEND_API_KEY`, `AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`, `TURNSTILE_SECRET`,
+   `ANTHROPIC_API_KEY`, `OPENAI_MODEL`). Paste the value.
+2. **Actions -> Update server environment -> Run workflow.**
+
+It scp's the values over, merges them into `.env` (replacing any existing
+definition, never duplicating a key), recreates the container so Compose re-reads
+`env_file`, waits for the health check, and prints `/api/health` so you can see
+what the server ended up with.
+
+Only secrets you actually set are sent; anything left unset keeps its current
+value on the server. Values never appear in the Actions log — only key names.
+`LLM_PROVIDER` and `COMING_SOON` are dropdowns on the run form rather than
+secrets, since neither is sensitive.
+
+The previous `.env` is backed up on the server as `.env.bak.<timestamp>`, and the
+five most recent backups are kept.
+
+This path also works when SSH from your own machine does not — the workflow runs
+from GitHub's network, not yours.
 
 ---
 
