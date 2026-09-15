@@ -16,6 +16,9 @@ next-env.d.ts
 # booked meetings written by `npm run dev` — server state, never source
 /data
 
+# files deploy.sh moved aside because git started tracking them
+/.deploy-backup
+
 # deploy state (server-side, not source)
 /nginx/active/*
 !/nginx/active/.gitkeep

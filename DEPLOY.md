@@ -469,6 +469,29 @@ Check with `ls -la ~/swenlly/public/media`.
 
 **Out of disk after several deploys** — `docker system prune -af`.
 
+**The deploy workflow is red and the site never changes.** Check the log for:
+
+```
+error: The following untracked working tree files would be overwritten by merge:
+	scripts/apply-env.sh
+```
+
+A file was created by hand on the server, and the repo later started tracking a
+file of the same name; git refuses to overwrite it, so `git pull` aborts and the
+container keeps running whatever it ran before. The workflow goes red but the site
+stays up, so this can sit unnoticed for days. `deploy.sh` now moves such files to
+`.deploy-backup/<timestamp>/` and retries on its own — but the fixed script only
+runs *after* a successful pull, so the first time has to be cleared by hand:
+
+```bash
+ssh USER@SERVER
+cd ~/swenlly
+rm scripts/apply-env.sh     # git has the canonical copy
+./scripts/deploy.sh
+```
+
+Confirm the server is on the right commit afterwards: `git -C ~/swenlly log --oneline -1`.
+
 **`403: access_denied` when authorising Google, or Meet links that stop after a
 week** — the OAuth app is in *Testing*. Publish it: **APIs & Services → OAuth
 consent screen → Audience → PUBLISH APP**. See "Google Meet links" above for why

@@ -9,7 +9,28 @@ cd "$(dirname "$0")/.."
 # execute stale (or garbled) logic. Pull first, then re-exec the freshly pulled copy once.
 if [ "${DEPLOY_REEXEC:-0}" != "1" ]; then
   echo "==> Pulling"
-  git pull --ff-only
+  # A file created by hand on the server silently blocks every future deploy the
+  # moment the repo starts tracking a file of the same name: git refuses to
+  # overwrite it, the pull aborts, and the site sits on old code while the
+  # workflow keeps going red. Move the offenders aside and carry on rather than
+  # leaving the box frozen — they are kept, not deleted.
+  if ! pull_output="$(git pull --ff-only 2>&1)"; then
+    printf '%s\n' "$pull_output"
+    blockers="$(printf '%s\n' "$pull_output" |
+      sed -n '/untracked working tree files would be overwritten/,/Please move or remove them/p' |
+      sed -n 's/^\t//p')"
+    [ -n "$blockers" ] || exit 1
+
+    backup=".deploy-backup/$(date +%Y%m%d-%H%M%S)"
+    echo "==> These exist on the server but are now tracked in git:"
+    printf '      %s\n' $blockers
+    echo "==> Moving them to $backup/ and retrying the pull"
+    for f in $blockers; do
+      mkdir -p "$backup/$(dirname "$f")"
+      mv "$f" "$backup/$f"
+    done
+    git pull --ff-only
+  fi
   DEPLOY_REEXEC=1 exec bash "$0" "$@"
 fi
 
