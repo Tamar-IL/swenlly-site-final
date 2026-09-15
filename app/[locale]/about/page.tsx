@@ -42,7 +42,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
         ))}
       </div>
 
-      <CtaBlock cta={a.cta} href={`/${loc}/contact`} />
+      <CtaBlock cta={a.cta} href={`/${loc}/booking`} />
     </div>
   );
 }

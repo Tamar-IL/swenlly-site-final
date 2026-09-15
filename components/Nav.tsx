@@ -31,7 +31,7 @@ export function Nav({ locale, content }: { locale: Locale; content: Content }) {
           ))}
         </nav>
         <div className="nav-r">
-          <Link className="pill pill-nav" href={`${base}/contact`}>
+          <Link className="pill pill-nav" href={`${base}/booking`}>
             {content.nav.cta}
           </Link>
         </div>
