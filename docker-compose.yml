@@ -1,3 +1,12 @@
+# ⚠️  This file starts nginx on ports 80/443. The swenlly.com server already runs
+#     Caddy there, so using this file on that box fails with
+#         Bind for 0.0.0.0:80 failed: port is already allocated
+#     and leaves swenlly-web on a network Caddy cannot reach — a 502 on the site.
+#
+#     On the server, always deploy with:   ./scripts/deploy.sh
+#     which uses docker-compose.caddy.yml. This file is for a host where nothing
+#     else owns 80/443.
+
 services:
   web:
     build:

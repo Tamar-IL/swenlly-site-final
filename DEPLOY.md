@@ -178,6 +178,28 @@ setting having no effect.
 | `certbot/conf/`  | Certificates. **Back this up.** Gitignored                  |
 | `public/media/`  | Videos, bind-mounted into the container. Gitignored          |
 
+## 6b. If the site returns 502
+
+Almost always caused by running a bare `docker compose` command. Without `-f`,
+Compose picks `docker-compose.yml`, which starts nginx on ports 80/443 — but this
+server already runs Caddy there. nginx fails to bind, and `swenlly-web` is left on
+a network Caddy cannot reach, so every request 502s.
+
+Recover with:
+
+```bash
+cd ~/swenlly
+docker compose -f docker-compose.yml down   # remove the wrong stack
+./scripts/deploy.sh                          # bring it back on the Caddy network
+```
+
+Confirm the container is on Caddy's network again:
+
+```bash
+docker inspect swenlly-web -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+```
+
+It should print the network named in `docker-compose.caddy.yml`, not `swenlly_swenlly`.
 ## 6c. Setting secrets without touching the server
 
 The Hetzner web console corrupts pasted text: underscores arrive as hyphens and
