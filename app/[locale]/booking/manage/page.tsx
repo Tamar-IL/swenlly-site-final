@@ -25,7 +25,7 @@ export default async function ManageBookingPage({ params }: { params: Promise<{ 
     <div className="wrap">
       <PageIntro eyebrow={m.eyebrow} h1={m.h1} lead={m.lead} />
       <div className="bento reveal" style={{ marginTop: 20 }}>
-        <div className="card c-full" style={{ maxWidth: 620, margin: "0 auto", width: "100%" }}>
+        <div className="card c-full" style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
           <ManageBooking />
         </div>
       </div>

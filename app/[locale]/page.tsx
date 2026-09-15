@@ -6,6 +6,7 @@ import { Testimonials } from "@/components/sections/Testimonials";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { JsonLd } from "@/components/JsonLd";
 import { HeroDotsCard } from "@/components/HeroDotsCard";
+import { ArrowIcon } from "@/components/sections/Bits";
 
 export default async function HomePage({
   params,
@@ -45,6 +46,7 @@ export default async function HomePage({
           <div className="hcta">
             <Link className="pill pill-w" href={`${base}/booking`}>
               {h.hero.ctaPrimary}
+            <ArrowIcon />
             </Link>
             <Link className="pill pill-o" href={`${base}/services`}>
               {h.hero.ctaSecondary}
@@ -102,7 +104,7 @@ export default async function HomePage({
       {/* TESTIMONIALS */}
       <div className="slab" id="quotes">
         <span className="t">{h.quotes.t}</span>
-        <span className="s">{h.quotes.s}</span>
+        {h.quotes.s && <span className="s">{h.quotes.s}</span>}
       </div>
       <div className="reveal">
         <Testimonials />
@@ -134,9 +136,19 @@ export default async function HomePage({
         <div className="ctarow">
           <Link className="pill pill-w" href={`${base}/booking`}>
             {h.cta.primary}
+            <ArrowIcon />
           </Link>
-          <NewsletterForm />
         </div>
+      </div>
+
+      {/* Keeping in touch is not a step in booking a call, so it does not sit
+          in the same box as the one that books it. */}
+      <div className="keepintouch reveal">
+        <div>
+          <div className="kt-t">{h.news.t}</div>
+          <p className="kt-s">{h.news.s}</p>
+        </div>
+        <NewsletterForm />
       </div>
 
       <JsonLd

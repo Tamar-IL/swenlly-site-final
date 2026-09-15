@@ -19,7 +19,9 @@ export default async function BookingPage({ params }: { params: Promise<{ locale
     <div className="wrap">
       <PageIntro eyebrow={b.eyebrow} h1={b.h1} lead={b.lead} />
       <div className="bento reveal" style={{ marginTop: 20 }}>
-        <div className="card c-full" style={{ maxWidth: 620, margin: "0 auto", width: "100%" }}>
+        {/* Wider than a single-column form needs: the calendar sits beside the
+            details now, and 620px would squeeze both. */}
+        <div className="card c-full" style={{ maxWidth: 980, margin: "0 auto", width: "100%" }}>
           <BookingForm />
         </div>
       </div>

@@ -423,6 +423,47 @@ input[type="checkbox"]{color-scheme:dark;accent-color:var(--green)}
 .cookiebar-btns{display:flex;gap:10px;flex-wrap:wrap}
 @media(max-width:640px){.cookiebar-btns{width:100%}.cookiebar-btns .pill{flex:1}}
 
+/* booking page — the calendar beside the details, not above a long scroll */
+.booklayout{display:grid;grid-template-columns:minmax(300px,1fr) minmax(280px,1fr);gap:22px;align-items:start}
+.bookcal{margin:0}
+.bookfields{display:flex;flex-direction:column;gap:16px;min-width:0}
+@media(max-width:860px){.booklayout{grid-template-columns:1fr}}
+
+.booksummary{border:1px solid var(--line);border-radius:14px;background:var(--card2);padding:16px 18px}
+.bs-t{font-family:var(--disp);font-weight:700;color:var(--tx);font-size:14px;margin-bottom:10px}
+.booksummary dl{margin:0;display:flex;flex-direction:column;gap:7px}
+.booksummary dl > div{display:flex;gap:10px;justify-content:space-between;align-items:baseline}
+.booksummary dt{font-family:var(--sans);font-size:12.5px;color:var(--tx3);flex:none}
+.booksummary dd{margin:0;font-family:var(--sans);font-size:13.5px;color:var(--tx);text-align:end}
+.booksummary dd.empty{color:var(--tx4)}
+
+/* email domain suggestions */
+.emailfield{position:relative;flex:1;min-width:0}
+.emailfield input{width:100%}
+.emailsuggest{position:absolute;z-index:20;inset-inline:0;top:calc(100% + 5px);margin:0;padding:5px;
+ list-style:none;background:var(--card3);border:1px solid var(--line2);border-radius:12px;
+ box-shadow:0 18px 40px -22px rgba(0,0,0,.9);max-height:210px;overflow-y:auto}
+.emailsuggest button{display:block;width:100%;text-align:start;background:none;border:0;
+ padding:9px 11px;border-radius:8px;color:var(--tx2);font-family:var(--sans);font-size:13.5px;
+ cursor:pointer;direction:ltr;unicode-bidi:plaintext}
+.emailsuggest button.on{background:var(--green);color:#0a0d07}
+
+/* the phrases the client's own words land hardest on */
+.tc blockquote strong{color:var(--tx);font-weight:700}
+
+/* newsletter — its own block, so it stops reading as a booking step */
+.keepintouch{max-width:var(--maxw);margin:42px auto 0;padding:26px;border:1px solid var(--line);
+ border-radius:20px;background:var(--card);display:flex;align-items:center;gap:26px;flex-wrap:wrap;
+ justify-content:space-between}
+.kt-t{font-family:var(--disp);font-weight:700;color:var(--tx);font-size:19px}
+.kt-s{font-family:var(--sans);font-size:13.5px;color:var(--tx3);line-height:1.7;margin-top:6px;max-width:52ch}
+.keepintouch .news{min-width:min(330px,100%)}
+@media(max-width:720px){.keepintouch{padding:22px}}
+
+/* CTA arrow — mirrors with the reading direction, unlike the "→" it replaced */
+.ico-arrow{margin-inline-start:8px;vertical-align:-3px;flex:none}
+[dir=ltr] .ico-arrow{transform:scaleX(-1)}
+
 /* booking calendar — a real month grid, square cells */
 .cal{display:flex;flex-direction:column;gap:12px}
 .cal-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
