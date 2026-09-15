@@ -57,26 +57,92 @@ export function notifyLead(f: { name: string; phone: string; email?: string; mes
 // ── Booking emails ───────────────────────────────────────────────────────────
 
 
-function shell(title: string, body: string): string {
-  return `<div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;background:#f6f6f4;padding:24px">
-  <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e6e6e2;border-radius:16px;padding:26px">
-    <h2 style="margin:0 0 14px;font-size:20px;color:#1f1f1f">${esc(title)}</h2>
-    ${body}
-    <p style="margin-top:22px;font-size:12px;color:#8a8a84">סוונלי אוטומציות · <a href="${SITE}" style="color:#8a8a84">${SITE.replace(/^https?:\/\//, "")}</a></p>
-  </div>
+/* The brand palette, as the emails can use it. The site is dark, but a fully
+   dark email is a gamble: Gmail inverts it, Outlook drops background colours,
+   and it prints badly. A dark header band over a light card carries the brand
+   and still renders everywhere. */
+const INK = "#141414";
+const GREEN = "#94C93D";
+const GREEN_INK = "#3f5a17";
+const PAPER = "#ffffff";
+const WASH = "#f4f4f1";
+const LINE = "#e6e6e2";
+const MUTED = "#8a8a84";
+const TEXT = "#1f1f1f";
+
+/* Absolute — an email has no origin to resolve a relative path against. A PNG
+   copy of the site's own wordmark: Outlook still will not render the webp the
+   site uses, and the AI variant is a product mark, not the company one. */
+const LOGO = `${SITE}/brand/swenlly-wordmark-white-email.png`;
+
+/**
+ * The wrapper every email shares: dark masthead with the wordmark, a green
+ * hairline, the content on white, and a quiet footer.
+ *
+ * Tables rather than flex or grid, because Outlook renders neither.
+ * `preheader` is the grey line inboxes show next to the subject; without one
+ * they scrape the first words of the body, which here would be a date.
+ */
+function shell(title: string, body: string, preheader = ""): string {
+  return `<div dir="rtl" style="margin:0;padding:0;background:${WASH}">
+  ${
+    preheader
+      ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(preheader)}</div>`
+      : ""
+  }
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${WASH};padding:24px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:${PAPER};border:1px solid ${LINE};border-radius:18px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">
+
+        <tr><td style="background:${INK};padding:22px 26px" align="right">
+          <img src="${LOGO}" alt="swenlly" width="132" height="30"
+               style="display:block;width:132px;height:auto;border:0;outline:none;text-decoration:none">
+        </td></tr>
+        <tr><td style="height:3px;background:${GREEN};font-size:0;line-height:0">&nbsp;</td></tr>
+
+        <tr><td style="padding:26px">
+          <h1 style="margin:0 0 16px;font-size:21px;line-height:1.3;color:${TEXT};font-weight:bold">${esc(title)}</h1>
+          ${body}
+        </td></tr>
+
+        <tr><td style="padding:18px 26px;background:${WASH};border-top:1px solid ${LINE}">
+          <p style="margin:0;font-size:12px;line-height:1.7;color:${MUTED}">
+            סוונלי אוטומציות · <a href="${SITE}" style="color:${MUTED}">${SITE.replace(/^https?:\/\//, "")}</a><br>
+            מערכות חכמות, סוכני AI ואוטומציות לעסקים.
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
 </div>`;
 }
 
+/** A filled button. `<a>` styled as one — email clients do not run buttons. */
+function button(label: string, href: string, kind: "solid" | "ghost" = "solid"): string {
+  const style =
+    kind === "solid"
+      ? `background:${INK};color:#ffffff;border:1px solid ${INK}`
+      : `background:${PAPER};color:${TEXT};border:1px solid ${LINE}`;
+  return `<a href="${esc(href)}" style="display:inline-block;${style};text-decoration:none;font-size:14px;font-weight:bold;padding:12px 20px;border-radius:999px;font-family:Arial,Helvetica,sans-serif">${esc(label)}</a>`;
+}
+
 function row(label: string, value: string): string {
-  return `<p style="margin:6px 0;font-size:14.5px;color:#1f1f1f"><b>${esc(label)}:</b> ${esc(value)}</p>`;
+  return `<tr>
+    <td style="padding:7px 0;font-size:13px;color:${MUTED};white-space:nowrap;vertical-align:top">${esc(label)}</td>
+    <td style="padding:7px 0 7px 14px;font-size:14.5px;color:${TEXT};vertical-align:top">${esc(value)}</td>
+  </tr>`;
 }
 
 function link(label: string, url: string): string {
-  return `<p style="margin:6px 0;font-size:14.5px;color:#1f1f1f"><b>${esc(label)}:</b> <a href="${esc(url)}" style="color:#1f6f5c">${esc(url)}</a></p>`;
+  return `<tr>
+    <td style="padding:7px 0;font-size:13px;color:${MUTED};white-space:nowrap;vertical-align:top">${esc(label)}</td>
+    <td style="padding:7px 0 7px 14px;font-size:14px;vertical-align:top"><a href="${esc(url)}" style="color:${GREEN_INK};word-break:break-all">${esc(url)}</a></td>
+  </tr>`;
 }
 
 function details(b: Booking): string {
-  return [
+  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;border-top:1px solid ${LINE};border-bottom:1px solid ${LINE};margin:4px 0 2px">` + [
     row("מועד", b.slotLabel),
     row("משך", `${SLOT_MINUTES} דקות`),
     b.meetLink ? link("קישור לפגישה (Google Meet)", b.meetLink) : "",
@@ -84,7 +150,7 @@ function details(b: Booking): string {
     b.field ? row("תחום", b.field) : "",
     row("נושא השיחה", b.topic),
     row("איש קשר", `${b.name} · ${b.phone} · ${b.email}`),
-  ].join("");
+  ].join("") + `</table>`;
 }
 
 /** Where the client goes to move or cancel. The token IS the authorisation, so
@@ -98,15 +164,11 @@ function manageButtons(b: Booking): string {
   const url = manageUrl(b);
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:20px">
     <tr>
-      <td style="padding-inline-end:10px">
-        <a href="${esc(url)}&amp;a=move" style="display:inline-block;background:#1f1f1f;color:#fff;text-decoration:none;font-size:14px;padding:11px 18px;border-radius:999px">שינוי מועד</a>
-      </td>
-      <td>
-        <a href="${esc(url)}&amp;a=cancel" style="display:inline-block;background:#fff;color:#1f1f1f;border:1px solid #d8d8d2;text-decoration:none;font-size:14px;padding:11px 18px;border-radius:999px">ביטול הפגישה</a>
-      </td>
+      <td style="padding-inline-end:10px">${button("שינוי מועד", `${url}&a=move`)}</td>
+      <td>${button("ביטול הפגישה", `${url}&a=cancel`, "ghost")}</td>
     </tr>
   </table>
-  <p style="margin-top:10px;font-size:12px;color:#8a8a84">הקישורים אישיים — עדיף לא להעביר אותם הלאה.</p>`;
+  <p style="margin-top:10px;font-size:12px;color:${MUTED}">הקישורים אישיים — עדיף לא להעביר אותם הלאה.</p>`;
 }
 
 function icsAttachment(b: Booking) {
@@ -136,14 +198,15 @@ export function sendBookingConfirmation(b: Booking): Promise<boolean> {
     subject: `הפגישה נקבעה · ${b.slotLabel}`,
     html: shell(
       "הפגישה נקבעה 🎉",
-      `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, קבענו. אלה הפרטים:</p>
+      `<p style="margin:0 0 18px;font-size:14.5px;line-height:1.7;color:${TEXT}">היי ${esc(b.name)}, קבענו. אלה הפרטים:</p>
        ${details(b)}
-       <p style="margin-top:16px;font-size:14px;color:#4a4a45">${
+       ${b.meetLink ? `<div style="margin-top:20px">${button("הצטרפות לשיחה", b.meetLink)}</div>` : ""}
+       <p style="margin-top:18px;font-size:14px;line-height:1.7;color:#4a4a45">${
          b.meetLink
            ? "השיחה היא בגוגל מיט — אפשר להצטרף מהקישור שלמעלה, והוא מחכה גם בהזמנה המצורפת ליומן."
            : "נשלח את קישור השיחה לפני המועד."
        } נשלח תזכורת שעה לפני.</p>
-       <p style="margin-top:16px;font-size:14px;color:#4a4a45">צריך לשנות מועד או לבטל? אפשר לעשות את זה לבד, כאן:</p>
+       <p style="margin-top:18px;font-size:14px;line-height:1.7;color:#4a4a45">צריך לשנות מועד או לבטל? אפשר לעשות את זה לבד, כאן:</p>
        ${manageButtons(b)}`
     ),
     attachments: [icsAttachment(b)],
@@ -157,13 +220,13 @@ export function sendBookingBrief(
   links: { label: string; url: string }[]
 ): Promise<boolean> {
   const briefHtml = brief
-    ? `<h3 style="margin:22px 0 8px;font-size:16px;color:#1f1f1f">תדריך לקראת השיחה</h3>
-       <div style="font-size:14px;line-height:1.7;color:#1f1f1f;white-space:pre-wrap">${esc(brief)}</div>`
-    : `<p style="margin-top:20px;font-size:13px;color:#8a8a84">אין תדריך AI — לא מוגדר מפתח LLM בשרת.</p>`;
+    ? `<h3 style="margin:24px 0 8px;font-size:15px;color:${TEXT}">תדריך לקראת השיחה</h3>
+       <div style="font-size:14px;line-height:1.75;color:${TEXT};white-space:pre-wrap">${esc(brief)}</div>`
+    : `<p style="margin-top:20px;font-size:13px;color:${MUTED}">אין תדריך AI — לא מוגדר מפתח LLM בשרת.</p>`;
   const linksHtml = links.length
-    ? `<h3 style="margin:22px 0 8px;font-size:16px;color:#1f1f1f">ללמוד על העסק והתחום</h3>
+    ? `<h3 style="margin:24px 0 8px;font-size:15px;color:${TEXT}">ללמוד על העסק והתחום</h3>
        <ul style="padding-inline-start:18px;margin:0;font-size:14px;line-height:1.9">
-       ${links.map((l) => `<li><a href="${esc(l.url)}" style="color:#1f6f5c">${esc(l.label)}</a></li>`).join("")}
+       ${links.map((l) => `<li><a href="${esc(l.url)}" style="color:${GREEN_INK}">${esc(l.label)}</a></li>`).join("")}
        </ul>`
     : "";
   return send({
@@ -196,7 +259,7 @@ export function sendReminder(b: Booking, to: "client" | "owner"): Promise<boolea
     subject: `תזכורת · פגישה בעוד שעה · ${esc(b.slotLabel)}`,
     html: shell(
       "תזכורת לפגישה",
-      `<p style="font-size:14.5px;color:#1f1f1f">${opening}</p>${details(b)}${
+      `<p style="margin:0 0 18px;font-size:14.5px;line-height:1.7;color:${TEXT}">${opening}</p>${details(b)}${
         to === "client" ? manageButtons(b) : link("ניהול הפגישה", manageUrl(b))
       }`
     ),
@@ -206,7 +269,7 @@ export function sendReminder(b: Booking, to: "client" | "owner"): Promise<boolea
 /** Both sides, after a meeting was moved. Carries the old time so nobody has to
  *  dig through their inbox to work out what changed. */
 export async function sendRescheduled(b: Booking): Promise<boolean> {
-  const was = b.movedFrom ? `<p style="font-size:14px;color:#8a8a84">היה: ${esc(b.movedFrom)}</p>` : "";
+  const was = b.movedFrom ? `<p style="margin:10px 0 0;font-size:13px;color:${MUTED}">היה: ${esc(b.movedFrom)}</p>` : "";
   const client = send({
     from: FROM,
     to: b.email,
@@ -214,9 +277,9 @@ export async function sendRescheduled(b: Booking): Promise<boolean> {
     subject: `המועד עודכן · ${b.slotLabel}`,
     html: shell(
       "המועד עודכן",
-      `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, הזזנו את הפגישה. אלה הפרטים החדשים:</p>
+      `<p style="margin:0 0 18px;font-size:14.5px;line-height:1.7;color:${TEXT}">היי ${esc(b.name)}, הזזנו את הפגישה. אלה הפרטים החדשים:</p>
        ${details(b)}${was}
-       <p style="margin-top:16px;font-size:14px;color:#4a4a45">${
+       <p style="margin-top:18px;font-size:14px;line-height:1.7;color:#4a4a45">${
          b.meetLink ? "קישור השיחה לא השתנה — אותו קישור עובד גם במועד החדש." : ""
        }</p>
        ${manageButtons(b)}`
@@ -244,8 +307,8 @@ export async function sendCancelled(b: Booking): Promise<boolean> {
     subject: `הפגישה בוטלה · ${b.slotLabel}`,
     html: shell(
       "הפגישה בוטלה",
-      `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, ביטלנו את הפגישה שהייתה קבועה ל־${esc(b.slotLabel)}. לא נשלח יותר תזכורות.</p>
-       <p style="margin-top:16px;font-size:14px;color:#4a4a45">בכל שלב אפשר לקבוע מחדש: <a href="${esc(SITE)}/${b.locale === "en" ? "en" : "he"}/booking" style="color:#1f6f5c">${esc(SITE.replace(/^https?:\/\//, ""))}/booking</a></p>`
+      `<p style="margin:0 0 14px;font-size:14.5px;line-height:1.7;color:${TEXT}">היי ${esc(b.name)}, ביטלנו את הפגישה שהייתה קבועה ל־${esc(b.slotLabel)}. לא נשלח יותר תזכורות.</p>
+       <p style="margin-top:16px;font-size:14px;line-height:1.7;color:#4a4a45">בכל שלב אפשר לקבוע מחדש: <a href="${esc(SITE)}/${b.locale === "en" ? "en" : "he"}/booking" style="color:${GREEN_INK}">${esc(SITE.replace(/^https?:\/\//, ""))}/booking</a></p>`
     ),
   });
   const owner = send({

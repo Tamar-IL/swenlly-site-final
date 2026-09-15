@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { isLocale, Locale } from "@/lib/i18n";
 import { getContent } from "@/lib/content";
-import { PageIntro, CtaBlock } from "@/components/sections/Bits";
+import { PageIntro, CtaBlock, ArrowIcon } from "@/components/sections/Bits";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -39,6 +39,7 @@ export default async function PricingPage({
         <div className="hcta" style={{ marginTop: 26 }}>
           <Link className="pill pill-w" href={`${base}/booking`}>
             {p.primary}
+            <ArrowIcon />
           </Link>
         </div>
       </div>

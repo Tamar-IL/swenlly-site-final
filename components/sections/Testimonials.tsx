@@ -9,6 +9,11 @@ import tene from "@/public/avatars/tene.jpg";
 
 /* Verbatim testimonials extracted from the client's own screenshots. Do not edit the text. */
 type Item = {
+  /* Phrases to set in bold. These are lifted from `quote` verbatim and matched
+     literally, so emphasis never becomes a licence to reword the quote — if a
+     phrase stops matching it simply stops being bold, and the text still reads
+     exactly as the client wrote it. */
+  emphasis?: string[];
   img: StaticImageData;
   name: string;
   role: string;
@@ -24,6 +29,7 @@ const ITEMS: Item[] = [
     name: "גילי מרגי",
     role: "רשת חוגי אנגלית לילדים",
     stars: 5,
+    emphasis: ["אמינה, מסורה לעבודה ומקצועית"],
     quote:
       "תמר אשת מקצוע מאד אמינה, מסורה לעבודה ומקצועית. ממש נהניתי מהשירות שלה והיא עדיין ממשיכה ללוות אותי בכל שאלה והדרכה, ממליצה עליה לקולגות שלי בעסק.",
   },
@@ -32,6 +38,7 @@ const ITEMS: Item[] = [
     name: "חני אייזנבך",
     role: "גרפיקאית",
     stars: 5,
+    emphasis: ["חוסכת לי המון זמן וכאב"],
     quote:
       "נהניתי מאוד מהתהליך העבודה איתך על דף האוטומציה. היית קשובה וסבלנית, וביצעת את כל התיקונים שביקשתי בסבלנות ובמקצועיות, עד שהגענו לתוצאה המושלמת. האוטומציה שבנית לי חוסכת לי המון זמן וכאב ראש ביומיום. תמר, את אלופה!",
   },
@@ -41,6 +48,7 @@ const ITEMS: Item[] = [
     role: "טנא הפקות",
     stars: 5,
     logo: true,
+    emphasis: ["לנדירה בשוק", "גורמת לקסם לקרות!", "אלופת העולמות"],
     quote:
       "תמר - מהירת הבנה! מקצועית! מעודכנת אונליין בכל הפיתוחים האחרונים! ומה שהופך אותה לנדירה בשוק.. - כי הרבה יותר מהידע - תמר מבינה את הצורך. יודעת לתת לו שם, ופשוט גורמת לקסם לקרות! וכל פעם שאני נתקעת עם בעיה. שאלה. היא מיד עונה: “תשאירי לי. אני מטפלת.” היא אלופת העולמות והחיבורים של מערכות ומימשקים!",
   },
@@ -49,10 +57,28 @@ const ITEMS: Item[] = [
     name: "שושי גבאי",
     role: "קופירייטרית",
     stars: 5,
+    emphasis: ["ומחמם לידים מקסים"],
     quote:
       "תודה על הבוט המדהים, עושה את העבודה ומחמם לידים מקסים. תהליך הבנייה נעשה עם המון שיתוף ושירות אדיב ומושלם, שימת לב לפרטים וראש גדול.",
   },
 ];
+
+/** Splits the quote around each phrase and wraps the matches in <strong>.
+ *  Everything outside a match is rendered untouched. */
+function emphasise(quote: string, phrases: string[] = []) {
+  const found = phrases.filter((ph) => quote.includes(ph));
+  if (!found.length) return quote;
+  // Longest first, so a phrase contained in another cannot split it.
+  const pattern = new RegExp(
+    `(${found
+      .sort((a, b) => b.length - a.length)
+      .map((ph) => ph.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|")})`
+  );
+  return quote.split(pattern).map((part, i) =>
+    found.includes(part) ? <strong key={i}>{part}</strong> : part
+  );
+}
 
 /* one row of three at a time — the rest live behind the arrows */
 const PER_VIEW = 3;
@@ -72,7 +98,7 @@ export function Testimonials() {
             </div>
             <div className="n">{t.name}</div>
             <div className="r">{t.role}</div>
-            <blockquote>{t.quote}</blockquote>
+            <blockquote>{emphasise(t.quote, t.emphasis)}</blockquote>
             <div className="stars" aria-label={`${t.stars} כוכבים`}>
               {"★".repeat(t.stars)}
             </div>
