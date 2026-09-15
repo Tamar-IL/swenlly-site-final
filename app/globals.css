@@ -231,10 +231,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .ctasection h2{font-size:clamp(28px,3.8vw,44px);letter-spacing:-.025em}
 .ctasection p{color:var(--tx3);font-size:16.5px;margin-top:16px;font-family:var(--sans)}
 .ctarow{display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:30px}
-.news{display:flex;gap:9px}
-.news input{flex:1;height:46px;background:var(--card2);border:1px solid var(--line2);border-radius:999px;padding:0 18px;color:var(--tx);font-family:var(--sans);font-size:14.5px;min-width:220px}
+.news{display:flex;flex-direction:column;gap:12px}
+.newsrow{display:flex;gap:9px}
+.news input[type="email"]{flex:1;height:46px;background:var(--card2);border:1px solid var(--line2);border-radius:999px;padding:0 18px;color:var(--tx);font-family:var(--sans);font-size:14.5px;min-width:220px}
 .news input:focus{outline:none;border-color:var(--tx3)}.news input::placeholder{color:var(--tx4)}
 .news button{height:46px}
+/* consent lives under every field that collects a personal detail */
+.newsconsent{display:flex;gap:9px;align-items:flex-start;cursor:pointer;
+ font-family:var(--sans);font-size:12.5px;line-height:1.65;color:var(--tx3);max-width:60ch}
+.newsconsent input{width:17px;height:17px;flex:none;margin-top:2px;cursor:pointer;accent-color:var(--green)}
+.consentlink{color:var(--green);text-decoration:underline;text-underline-offset:3px}
 
 /* section label */
 .slab{display:flex;align-items:baseline;gap:12px;margin:64px 0 18px;flex-wrap:wrap}
@@ -247,6 +253,9 @@ footer{border-top:1px solid var(--line);padding:52px 0 38px;margin-top:76px}
 footer img.logo{height:28px;opacity:.9}
 .footer-logo{height:26px;width:auto;opacity:.9;margin-bottom:12px;display:block}
 .fcol{font-size:13.5px;color:var(--tx3);line-height:2.1;font-family:var(--sans)}.fcol a:hover{color:var(--tx)}
+/* reopening the privacy banner is a button, but it belongs in a column of links */
+.footerlink{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:start}
+.footerlink:hover{color:var(--tx)}
 .fb{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--tx4)}
 
 /* Scroll-reveal. Nothing is hidden by CSS alone, and nothing on screen is ever
@@ -386,6 +395,9 @@ footer img.logo{height:28px;opacity:.9}
 .chatsuggest .newp{cursor:pointer;font-size:12px}
 
 /* forms */
+/* The page is dark but a native checkbox is not: without color-scheme the
+   browser paints an unchecked box white. accent-color only covers the tick. */
+input[type="checkbox"]{color-scheme:dark;accent-color:var(--green)}
 .formgrid{display:flex;flex-direction:column;gap:16px}
 .fld{display:flex;flex-direction:column;gap:8px}
 .fld label{font-size:13px;color:var(--tx2);font-family:var(--sans)}
@@ -397,6 +409,19 @@ footer img.logo{height:28px;opacity:.9}
 .formstatus{font-size:14px;font-family:var(--sans);margin-top:6px}
 .formstatus.ok{color:var(--green)}
 .formstatus.err{color:#e0736b}
+
+/* privacy banner */
+.cookiebar{position:fixed;inset-inline:0;bottom:0;z-index:90;padding:14px;
+ padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.cookiebar-in{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:20px;
+ flex-wrap:wrap;justify-content:space-between;background:rgba(23,23,23,.96);
+ border:1px solid var(--line2);border-radius:18px;padding:18px 22px;
+ box-shadow:0 22px 54px -26px rgba(0,0,0,.9);backdrop-filter:blur(10px)}
+.cookiebar-t{font-family:var(--disp);font-weight:700;color:var(--tx);font-size:15px;margin-bottom:6px}
+.cookiebar-p{font-family:var(--sans);font-size:13px;line-height:1.7;color:var(--tx2);max-width:66ch}
+.cookiebar-link{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+.cookiebar-btns{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:640px){.cookiebar-btns{width:100%}.cookiebar-btns .pill{flex:1}}
 
 /* booking calendar */
 .bookstep{display:flex;flex-direction:column;gap:14px;padding:18px;border:1px solid var(--line);

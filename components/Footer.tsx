@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Content } from "@/lib/content";
 import type { Locale } from "@/lib/i18n";
+import { CookiePrefsButton } from "./widgets/CookieBanner";
 
 export function Footer({ locale, content }: { locale: Locale; content: Content }) {
   const base = `/${locale}`;
@@ -40,6 +41,15 @@ export function Footer({ locale, content }: { locale: Locale; content: Content }
             <Link href={`${base}/about`}>{content.nav.about}</Link>
             <br />
             <Link href={`${base}/contact`}>{content.nav.contact}</Link>
+          </nav>
+
+          <nav className="fcol">
+            <div className="mono" style={{ fontSize: 11, letterSpacing: ".07em", marginBottom: 6, color: "var(--tx4)" }}>
+              {content.footer.legalHead}
+            </div>
+            <Link href={`${base}/privacy`}>{content.footer.privacy}</Link>
+            <br />
+            <CookiePrefsButton />
           </nav>
         </div>
 

@@ -15,6 +15,11 @@ export const leadSchema = z.object({
   message: z.string().trim().max(2000, "ההודעה ארוכה מדי — עד 2000 תווים").optional().or(z.literal("")),
   source: z.string().max(60).default("contact"),
   locale: z.string().max(10).default("he"),
+  // The visitor ticked the box. A form that only checks this in the browser is
+  // checking nothing, so the record is refused here too.
+  consent: z.literal(true, {
+    errorMap: () => ({ message: "כדי להמשיך, צריך לסמן את תיבת האישור." }),
+  }),
   turnstileToken: z.string().optional(),
   hp: z.string().optional(), // honeypot
 });
@@ -43,6 +48,9 @@ export const bookingSchema = z.object({
     .min(1, "נא לכתוב על מה נדבר")
     .max(400, "הנושא ארוך מדי"),
   locale: z.string().max(10).default("he"),
+  consent: z.literal(true, {
+    errorMap: () => ({ message: "כדי להמשיך, צריך לסמן את תיבת האישור." }),
+  }),
   turnstileToken: z.string().optional(),
   hp: z.string().optional(),
 });

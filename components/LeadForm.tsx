@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useContent } from "./ContentProvider";
 
 export function LeadForm() {
@@ -41,6 +42,7 @@ export function LeadForm() {
           message: fd.get("message"),
           source: "contact",
           locale,
+          consent: true,
         }),
       });
       const data = await res.json();
@@ -85,7 +87,12 @@ export function LeadForm() {
           /* accentColor recolours the native tick — the browser default is blue */
           style={{ marginTop: 2, width: 18, height: 18, cursor: "pointer", flexShrink: 0, accentColor: "var(--green)" }}
         />
-        <label htmlFor="lf-consent" style={{ cursor: "pointer", fontSize: 14 }}>{f.consent}</label>
+        <label htmlFor="lf-consent" style={{ cursor: "pointer", fontSize: 14 }}>
+          {f.consent}{" "}
+          <Link href={`/${locale}/privacy`} className="consentlink">
+            {content.consent.policyLink}
+          </Link>
+        </label>
       </div>
       <input className="hp" type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" />
       <button className="btn" type="submit" disabled={state === "sending"} style={{ marginTop: 20, width: "100%" }}>

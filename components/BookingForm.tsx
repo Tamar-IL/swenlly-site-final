@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useContent } from "./ContentProvider";
 
 type Slot = { iso: string; time: string };
@@ -60,6 +61,11 @@ export function BookingForm() {
       setMsg(f.needSlot);
       return;
     }
+    if (!fd.get("consent")) {
+      setState("err");
+      setMsg(content.consent.err);
+      return;
+    }
     setState("sending");
     try {
       const res = await fetch("/api/booking", {
@@ -74,6 +80,7 @@ export function BookingForm() {
           phone: fd.get("phone"),
           email: fd.get("email"),
           locale,
+          consent: true,
         }),
       });
       const data = await res.json();
@@ -179,6 +186,16 @@ export function BookingForm() {
           <input name="email" type="email" required placeholder={f.email} aria-label={f.email} autoComplete="email" />
         </div>
       </div>
+
+      <label className="newsconsent" htmlFor="bf-consent">
+        <input id="bf-consent" name="consent" type="checkbox" required />
+        <span>
+          {content.consent.booking}{" "}
+          <Link href={`/${locale}/privacy`} className="consentlink">
+            {content.consent.policyLink}
+          </Link>
+        </span>
+      </label>
 
       <input className="hp" type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" />
 
