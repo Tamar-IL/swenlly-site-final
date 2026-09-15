@@ -191,9 +191,10 @@ setting having no effect.
 and 20:00–23:00 Israel time, at least 14 hours ahead and at most two weeks out, and
 never on Shabbat, a yom tov, or the day before one. Shabbat is arithmetic; the
 holidays come from [Hebcal](https://www.hebcal.com/)'s public JSON API, cached for
-12 hours in the container. **The container must be able to reach `www.hebcal.com`**
-— if it cannot, the calendar falls back to blocking every Friday and Saturday and
-logs `[hebcal] request failed`, so chagim would be bookable. Check after a deploy:
+12 hours in the container. If the container ever cannot reach `www.hebcal.com`, the
+calendar falls back to blocking every Friday and Saturday and logs
+`[hebcal] request failed`, which would leave chagim bookable — so it is worth a
+check after a deploy:
 
 ```bash
 docker compose exec web node -e "fetch('https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&i=on&start=2026-01-01&end=2026-01-31').then(r=>console.log(r.status))"
@@ -201,14 +202,16 @@ docker compose exec web node -e "fetch('https://www.hebcal.com/hebcal?v=1&cfg=js
 
 A meeting runs 30 minutes and is followed by a 15-minute break, so starts sit 45
 minutes apart: 11:00, 11:45, 12:30 … and 20:00, 20:45, 21:30, 22:15. Nothing can
-be booked inside another meeting's break.
+be booked inside another meeting's break, and **a day stops offering times once it
+holds 4 meetings** — cancelled ones do not count, so a cancellation reopens both
+the slot and the day.
 
-Two people cannot take the same time. Checking and taking a slot runs under a
-per-day lock inside the server, so simultaneous requests queue instead of both
-reading "free"; and because a second instance would not share that lock, every
-booking is re-checked against the store immediately after it is written — the
-earliest `createdAt` keeps the slot, and the loser is deleted along with its
-calendar event before any confirmation goes out.
+Two people cannot take the same time. Checking a slot and taking it runs under a
+per-day lock, so simultaneous requests queue instead of both reading "free" —
+eight at once for the same slot leave exactly one booking. The lock lives in the
+server process, and so does the store, so this assumes **one `web` container**,
+which is what `docker-compose.yml` runs. Scaling to two would need a shared store
+before it needed anything else.
 
 Booking a meeting sends the visitor a confirmation with an `.ics` invite, and sends
 `NOTIFY_EMAIL` the same details plus an AI brief on the business and search links
@@ -240,15 +243,28 @@ or through GitHub secrets (section 6c) as `GOOGLE_CLIENT_ID`,
    testing and only that one account ever signs in.
 4. **Credentials → Create credentials → OAuth client ID → Desktop app.** Copy the
    client ID and secret.
-5. On your own machine, in a checkout of this repo:
+5. On your own machine, in a checkout of this repo, run:
 
-   ```bash
-   GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... npm run google:token
+   ```
+   npm run google:token
    ```
 
-   Open the URL it prints, approve as the calendar's account, paste the code back,
-   and it prints `GOOGLE_REFRESH_TOKEN=...`. Put all four values in `.env` and
-   restart the container.
+   It asks for the client ID and secret, prints a URL to open, and takes the code
+   Google shows you. Then it prints all four lines ready to paste into `.env`:
+
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_REFRESH_TOKEN=...
+   GOOGLE_CALENDAR_ID=primary
+   ```
+
+   Run it exactly as written — no `VAR=value` prefix. That form is bash syntax and
+   PowerShell reads it as a command name, which is why
+   `...googleusercontent.com is not recognized as the name of a cmdlet` comes back.
+   The script prompts instead, so it behaves the same in PowerShell, cmd and bash.
+
+   Put the four lines in `.env` and restart the container.
 
 `GOOGLE_CALENDAR_ID` is `primary` for that account's own calendar; use a calendar's
 ID from Google Calendar → Settings → *Integrate calendar* to book into a shared one

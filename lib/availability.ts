@@ -2,7 +2,7 @@
 // go through here, so neither can offer a slot the other would refuse.
 
 import { dayBlock, BlockedDay } from "./hebcal";
-import { takenSlots } from "./bookings-store";
+import { takenSlots, countsByDay } from "./bookings-store";
 import { addDays, dayKey, formatDayLabel, fromWall, hhmm, startOfDay, wallOf } from "./time";
 
 /** Israel-time windows a meeting may start in. */
@@ -21,12 +21,17 @@ export const STEP_MINUTES = SLOT_MINUTES + BREAK_MINUTES;
 export const MIN_LEAD_HOURS = 14;
 /** And no further ahead than this. */
 export const HORIZON_DAYS = 14;
+/** However many slots a day has, only this many meetings are taken on it. */
+export const MAX_PER_DAY = 4;
 
 export type Slot = { iso: string; time: string };
 export type Day = { day: string; label: string; slots: Slot[] };
 
-export type Unavailable =
-  | { ok: false; reason: "too-soon" | "too-far" | "outside-hours" | "taken" | "blocked" | "invalid"; message: string };
+export type Unavailable = {
+  ok: false;
+  reason: "too-soon" | "too-far" | "outside-hours" | "taken" | "blocked" | "day-full" | "invalid";
+  message: string;
+};
 export type SlotCheck = { ok: true } | Unavailable;
 
 export function earliestStart(now: Date): Date {
@@ -37,6 +42,12 @@ export function latestStart(now: Date): Date {
   // End of the last day inside the horizon, so "two weeks ahead" means the
   // whole day and not the exact minute.
   return addDays(startOfDay(now), HORIZON_DAYS + 1);
+}
+
+function dayFullMessage(locale: string): string {
+  return locale === "en"
+    ? `That day is fully booked — we take ${MAX_PER_DAY} meetings a day. Please pick another.`
+    : `היום הזה מלא — אנחנו לוקחים ${MAX_PER_DAY} פגישות ביום. אפשר לבחור יום אחר.`;
 }
 
 function blockedMessage(block: BlockedDay, locale: string): string {
@@ -87,21 +98,30 @@ export function clashes(aStartMs: number, bStartMs: number): boolean {
 
 /**
  * The calendar the visitor sees: only days that have at least one bookable slot.
+ * `excludeId` is a booking being rescheduled, so it does not block itself.
  */
-export async function availableDays(now = new Date(), locale = "he"): Promise<Day[]> {
+export async function availableDays(
+  now = new Date(),
+  locale = "he",
+  excludeId?: string
+): Promise<Day[]> {
   const first = earliestStart(now);
   const last = latestStart(now);
   // Pad the lookup: a meeting just outside the window still blocks the slot at
   // its edge, because the break reaches across the boundary.
   const taken = await takenSlots(
     new Date(first.getTime() - STEP_MINUTES * 60_000),
-    new Date(last.getTime() + STEP_MINUTES * 60_000)
+    new Date(last.getTime() + STEP_MINUTES * 60_000),
+    excludeId
   );
+  // One pass over the store for the whole horizon, rather than a count per day.
+  const perDay = await countsByDay(startOfDay(now), latestStart(now), dayKey, excludeId);
   const days: Day[] = [];
 
   for (let i = 0; i <= HORIZON_DAYS; i++) {
     const date = addDays(startOfDay(now), i);
     if (await dayBlock(date, now, HORIZON_DAYS)) continue;
+    if ((perDay.get(dayKey(date)) ?? 0) >= MAX_PER_DAY) continue;
     const slots = slotsOfDay(date)
       .filter((s) => s.getTime() >= first.getTime() && s.getTime() <= last.getTime())
       .filter((s) => !taken.some((t) => clashes(t, s.getTime())))
@@ -111,8 +131,18 @@ export async function availableDays(now = new Date(), locale = "he"): Promise<Da
   return days;
 }
 
-/** Re-checks a slot at submit time. The calendar is a hint; this is the gate. */
-export async function checkSlot(iso: string, now = new Date(), locale = "he"): Promise<SlotCheck> {
+/**
+ * Re-checks a slot at submit time. The calendar is a hint; this is the gate.
+ *
+ * `excludeId` is the booking being moved: a meeting must not be told its own
+ * current slot is taken, or that a day is full because it is on it.
+ */
+export async function checkSlot(
+  iso: string,
+  now = new Date(),
+  locale = "he",
+  excludeId?: string
+): Promise<SlotCheck> {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) {
     return { ok: false, reason: "invalid", message: locale === "en" ? "Invalid time." : "מועד לא תקין." };
@@ -154,9 +184,16 @@ export async function checkSlot(iso: string, now = new Date(), locale = "he"): P
   const block = await dayBlock(slot, now, HORIZON_DAYS);
   if (block) return { ok: false, reason: "blocked", message: blockedMessage(block, locale) };
 
+  const day = startOfDay(slot);
+  const perDay = await countsByDay(day, addDays(day, 1), dayKey, excludeId);
+  if ((perDay.get(dayKey(slot)) ?? 0) >= MAX_PER_DAY) {
+    return { ok: false, reason: "day-full", message: dayFullMessage(locale) };
+  }
+
   const taken = await takenSlots(
     new Date(slot.getTime() - STEP_MINUTES * 60_000),
-    new Date(slot.getTime() + STEP_MINUTES * 60_000)
+    new Date(slot.getTime() + STEP_MINUTES * 60_000),
+    excludeId
   );
   if (taken.some((t) => clashes(t, slot.getTime()))) {
     return {

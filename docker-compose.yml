@@ -13,6 +13,10 @@ services:
     volumes:
       # Videos/large assets live on the host, not in the image.
       - ./public/media:/app/public/media:ro
+      # Booked meetings. This IS the record — losing it reopens booked slots and
+      # drops pending reminders. A named volume rather than a bind mount, so the
+      # container's non-root user owns it without anyone chowning a host folder.
+      - bookings:/app/data
     networks: [swenlly]
 
   nginx:
@@ -41,6 +45,9 @@ services:
       while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
     restart: unless-stopped
     networks: [swenlly]
+
+volumes:
+  bookings:
 
 networks:
   swenlly:

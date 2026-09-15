@@ -40,7 +40,7 @@ export async function sweepReminders(now = new Date()): Promise<SweepResult> {
         await markReminderSent(b);
         sent++;
       } else {
-        console.error("[reminders] both sends failed", { slot: b.slotISO });
+        console.error("[reminders] both sends failed", { id: b.id });
       }
     } catch (err) {
       console.error("[reminders] send failed", err);

@@ -87,6 +87,28 @@ function details(b: Booking): string {
   ].join("");
 }
 
+/** Where the client goes to move or cancel. The token IS the authorisation, so
+ *  it only ever travels to the address that booked the meeting — and to us. */
+export function manageUrl(b: Booking): string {
+  const locale = b.locale === "en" ? "en" : "he";
+  return `${SITE}/${locale}/booking/manage?t=${encodeURIComponent(b.token)}`;
+}
+
+function manageButtons(b: Booking): string {
+  const url = manageUrl(b);
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:20px">
+    <tr>
+      <td style="padding-inline-end:10px">
+        <a href="${esc(url)}&amp;a=move" style="display:inline-block;background:#1f1f1f;color:#fff;text-decoration:none;font-size:14px;padding:11px 18px;border-radius:999px">שינוי מועד</a>
+      </td>
+      <td>
+        <a href="${esc(url)}&amp;a=cancel" style="display:inline-block;background:#fff;color:#1f1f1f;border:1px solid #d8d8d2;text-decoration:none;font-size:14px;padding:11px 18px;border-radius:999px">ביטול הפגישה</a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin-top:10px;font-size:12px;color:#8a8a84">הקישורים אישיים — עדיף לא להעביר אותם הלאה.</p>`;
+}
+
 function icsAttachment(b: Booking) {
   const ics = buildIcs({
     uid: `${Date.parse(b.slotISO)}-${b.email}@swenlly.com`,
@@ -120,7 +142,9 @@ export function sendBookingConfirmation(b: Booking): Promise<boolean> {
          b.meetLink
            ? "השיחה היא בגוגל מיט — אפשר להצטרף מהקישור שלמעלה, והוא מחכה גם בהזמנה המצורפת ליומן."
            : "נשלח את קישור השיחה לפני המועד."
-       } נשלח תזכורת שעה לפני. צריך לשנות מועד? אפשר פשוט להשיב למייל הזה.</p>`
+       } נשלח תזכורת שעה לפני.</p>
+       <p style="margin-top:16px;font-size:14px;color:#4a4a45">צריך לשנות מועד או לבטל? אפשר לעשות את זה לבד, כאן:</p>
+       ${manageButtons(b)}`
     ),
     attachments: [icsAttachment(b)],
   });
@@ -151,6 +175,7 @@ export function sendBookingBrief(
       "פגישה חדשה ביומן",
       `${details(b)}
        ${row("נקבע דרך", b.source === "agent" ? "הסוכן החכם" : "טופס האתר")}
+       ${link("ניהול הפגישה (שינוי מועד / ביטול)", manageUrl(b))}
        ${briefHtml}
        ${linksHtml}`
     ),
@@ -169,6 +194,67 @@ export function sendReminder(b: Booking, to: "client" | "owner"): Promise<boolea
     to: to === "client" ? b.email : NOTIFY,
     reply_to: to === "client" ? REPLY_TO : b.email || REPLY_TO,
     subject: `תזכורת · פגישה בעוד שעה · ${esc(b.slotLabel)}`,
-    html: shell("תזכורת לפגישה", `<p style="font-size:14.5px;color:#1f1f1f">${opening}</p>${details(b)}`),
+    html: shell(
+      "תזכורת לפגישה",
+      `<p style="font-size:14.5px;color:#1f1f1f">${opening}</p>${details(b)}${
+        to === "client" ? manageButtons(b) : link("ניהול הפגישה", manageUrl(b))
+      }`
+    ),
   });
+}
+
+/** Both sides, after a meeting was moved. Carries the old time so nobody has to
+ *  dig through their inbox to work out what changed. */
+export async function sendRescheduled(b: Booking): Promise<boolean> {
+  const was = b.movedFrom ? `<p style="font-size:14px;color:#8a8a84">היה: ${esc(b.movedFrom)}</p>` : "";
+  const client = send({
+    from: FROM,
+    to: b.email,
+    reply_to: REPLY_TO,
+    subject: `המועד עודכן · ${b.slotLabel}`,
+    html: shell(
+      "המועד עודכן",
+      `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, הזזנו את הפגישה. אלה הפרטים החדשים:</p>
+       ${details(b)}${was}
+       <p style="margin-top:16px;font-size:14px;color:#4a4a45">${
+         b.meetLink ? "קישור השיחה לא השתנה — אותו קישור עובד גם במועד החדש." : ""
+       }</p>
+       ${manageButtons(b)}`
+    ),
+    attachments: [icsAttachment(b)],
+  });
+  const owner = send({
+    from: FROM,
+    to: NOTIFY,
+    reply_to: b.email || REPLY_TO,
+    subject: `מועד עודכן · ${esc(b.business || b.name)} · ${esc(b.slotLabel)}`,
+    html: shell("מועד עודכן", `${details(b)}${was}${link("ניהול הפגישה", manageUrl(b))}`),
+    attachments: [icsAttachment(b)],
+  });
+  const [a, c] = await Promise.all([client, owner]);
+  return a || c;
+}
+
+/** Both sides, after a meeting was cancelled. */
+export async function sendCancelled(b: Booking): Promise<boolean> {
+  const client = send({
+    from: FROM,
+    to: b.email,
+    reply_to: REPLY_TO,
+    subject: `הפגישה בוטלה · ${b.slotLabel}`,
+    html: shell(
+      "הפגישה בוטלה",
+      `<p style="font-size:14.5px;color:#1f1f1f">היי ${esc(b.name)}, ביטלנו את הפגישה שהייתה קבועה ל־${esc(b.slotLabel)}. לא נשלח יותר תזכורות.</p>
+       <p style="margin-top:16px;font-size:14px;color:#4a4a45">בכל שלב אפשר לקבוע מחדש: <a href="${esc(SITE)}/${b.locale === "en" ? "en" : "he"}/booking" style="color:#1f6f5c">${esc(SITE.replace(/^https?:\/\//, ""))}/booking</a></p>`
+    ),
+  });
+  const owner = send({
+    from: FROM,
+    to: NOTIFY,
+    reply_to: b.email || REPLY_TO,
+    subject: `פגישה בוטלה · ${esc(b.business || b.name)} · ${esc(b.slotLabel)}`,
+    html: shell("פגישה בוטלה", details(b)),
+  });
+  const [a, c] = await Promise.all([client, owner]);
+  return a || c;
 }

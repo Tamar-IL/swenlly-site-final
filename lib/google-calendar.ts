@@ -157,7 +157,42 @@ export async function createMeetEvent(input: {
   }
 }
 
-/** Removes an event — used when a booking loses a race after it was created. */
+/**
+ * Moves an existing event to a new time. A PATCH leaves conferenceData alone, so
+ * the meeting keeps the same Meet link and anyone holding it can still join.
+ */
+export async function moveEvent(eventId: string, start: Date): Promise<boolean> {
+  const cfg = config();
+  if (!cfg || !eventId) return false;
+  const token = await accessToken();
+  if (!token) return false;
+  const end = new Date(start.getTime() + SLOT_MINUTES * 60_000);
+  try {
+    const res = await fetch(
+      `${API}/calendars/${encodeURIComponent(cfg.calendarId)}/events/${encodeURIComponent(eventId)}` +
+        `?sendUpdates=none`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start: { dateTime: start.toISOString(), timeZone: TZ },
+          end: { dateTime: end.toISOString(), timeZone: TZ },
+        }),
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) {
+      console.error("[google] event move failed", res.status, await res.text());
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[google] event move error", err);
+    return false;
+  }
+}
+
+/** Removes an event — a cancelled meeting, or one that lost a race. */
 export async function deleteEvent(eventId: string): Promise<void> {
   const cfg = config();
   if (!cfg || !eventId) return;
