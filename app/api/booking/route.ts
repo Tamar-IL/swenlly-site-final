@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   if (data.hp) return NextResponse.json({ ok: true });
 
   if (!(await verifyTurnstile(data.turnstileToken, ip))) {
-    return NextResponse.json({ ok: false, error: "אימות נכשל. נסו שוב." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "אימות האבטחה נכשל. אפשר לרענן את הדף ולנסות שוב." }, { status: 400 });
   }
 
   const result = await createRecord("Bookings", {

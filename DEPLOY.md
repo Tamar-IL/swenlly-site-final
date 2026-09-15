@@ -212,6 +212,33 @@ from GitHub's network, not yours.
 
 ---
 
+## 6d. Turning on Turnstile (bot protection for the forms)
+
+The contact and booking forms verify a Cloudflare Turnstile token server-side.
+Until keys are configured the check is skipped, so the only spam defence is the
+honeypot field.
+
+1. At dash.cloudflare.com -> Turnstile, add a widget for `swenlly.com`. You get a
+   **site key** (public) and a **secret key** (private).
+2. Add both as repository secrets, named exactly:
+   - `NEXT_PUBLIC_TURNSTILE_SITEKEY`
+   - `TURNSTILE_SECRET`
+3. Actions -> Update server environment -> Run workflow, and **tick `rebuild`**.
+
+Step 3's tick matters. `NEXT_PUBLIC_*` values are not read at runtime — Next.js
+compiles them into the browser bundle, so the site key only takes effect after
+the image is rebuilt. Recreating the container is not enough, and skipping the
+rebuild leaves the widget invisible while the server starts rejecting every
+submission for a missing token.
+
+Confirm with `curl -s https://swenlly.com/api/health` — `turnstile` should be
+`true` — and then submit the contact form yourself before considering it done.
+
+To turn it off again, delete both secrets from the server's `.env` and redeploy;
+`verifyTurnstile` returns true when no secret is set.
+
+---
+
 ## 7. Common tasks
 
 ```bash
