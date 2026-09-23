@@ -201,7 +201,6 @@ export function ManageBooking() {
                   {busy ? m.moving : m.moveConfirm}
                 </button>
               )}
-              <p className="formnote">{cal.rules}</p>
             </section>
           )}
 

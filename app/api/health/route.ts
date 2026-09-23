@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ensureReminderLoop } from "@/lib/reminders";
+import { hebcalStatus } from "@/lib/hebcal";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,10 @@ export function GET() {
       // false means bookings are confirmed without a Google Meet link.
       googleMeet: google,
     },
+    // degraded:true means the container could not reach hebcal.com, so only
+    // Shabbat is being blocked and every chag is bookable. Nothing else shows
+    // this — the site looks perfectly healthy while it happens.
+    holidays: hebcalStatus(),
     agent: {
       provider: usingOpenAI ? "openai" : "anthropic",
       keyPresent: usingOpenAI

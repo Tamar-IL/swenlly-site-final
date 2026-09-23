@@ -154,7 +154,6 @@ export function BookingForm() {
           />
         )}
 
-        <p className="formnote">{cal.rules}</p>
       </section>
 
       <div className="bookfields">
