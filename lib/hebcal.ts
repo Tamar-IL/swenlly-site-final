@@ -27,7 +27,32 @@ type CacheEntry = { at: number; key: string; days: Map<string, BlockedDay>; degr
 let cache: CacheEntry | null = null;
 let inflight: Promise<CacheEntry> | null = null;
 
-type HebcalItem = { title?: string; hebrew?: string; date?: string; yomtov?: boolean; category?: string };
+type HebcalItem = {
+  title?: string;
+  hebrew?: string;
+  date?: string;
+  yomtov?: boolean;
+  category?: string;
+  subcat?: string;
+};
+
+/**
+ * Is this a day swenlly does not hold meetings on?
+ *
+ * `yomtov` alone is not enough. It marks only the rest days, so the middle of
+ * Sukkot and Pesach — Chol HaMoed — comes back false and used to be offered as
+ * if it were an ordinary week. For an Israeli business that whole stretch is
+ * the chag, and Hebcal marks those days in the title: "Sukkot III (CH''M)".
+ *
+ * Deliberately NOT everything Hebcal calls a major holiday: Chanukah, Purim and
+ * Tu BiShvat are working days here, and blocking eight days of Chanukah would
+ * be its own bug.
+ */
+function isClosed(item: HebcalItem): boolean {
+  if (item.yomtov) return true;
+  const title = `${item.title || ""} ${item.hebrew || ""}`;
+  return /CH['\u2019\u05F3]{0,2}M|Chol ha-?Moed|חוה["\u05F4]?מ/i.test(title);
+}
 
 async function fetchYomTov(start: string, end: string): Promise<{ map: Map<string, string>; ok: boolean }> {
   const url =
@@ -46,7 +71,7 @@ async function fetchYomTov(start: string, end: string): Promise<{ map: Map<strin
     }
     const data = (await res.json()) as { items?: HebcalItem[] };
     for (const item of data.items || []) {
-      if (!item.yomtov || !item.date) continue;
+      if (!item.date || !isClosed(item)) continue;
       // Holiday items are plain "YYYY-MM-DD"; anything with a time is not a rest day.
       const day = item.date.slice(0, 10);
       map.set(day, item.hebrew || item.title || "חג");
@@ -111,6 +136,27 @@ export async function blockedDays(from: Date, horizonDays: number): Promise<Cach
       inflight = null;
     });
   return inflight;
+}
+
+/**
+ * What the holiday data currently is. A silent Hebcal failure degrades to
+ * blocking only Fridays and Saturdays, which looks completely normal from the
+ * outside while every chag quietly becomes bookable — so it has to be visible
+ * somewhere. /api/health reports this.
+ */
+export function hebcalStatus(): {
+  loaded: boolean;
+  degraded: boolean;
+  blockedDays: number;
+  ageMinutes: number | null;
+} {
+  return {
+    loaded: cache !== null,
+    // true = Hebcal could not be reached, and only Shabbat is being blocked.
+    degraded: cache?.degraded ?? true,
+    blockedDays: cache ? cache.days.size : 0,
+    ageMinutes: cache ? Math.round((Date.now() - cache.at) / 60000) : null,
+  };
 }
 
 /** Why a given Israel calendar day cannot hold a meeting, or null if it can. */
