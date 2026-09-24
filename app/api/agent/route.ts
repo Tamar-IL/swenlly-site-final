@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { agentSchema } from "@/lib/validation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { runAgent, agentConfigured } from "@/lib/llm";
-import { createRecord } from "@/lib/airtable";
+import { recordTurn } from "@/lib/agent-transcripts";
 
 export async function POST(req: Request) {
   const ip = clientIp(req);
@@ -36,13 +36,9 @@ export async function POST(req: Request) {
 
   try {
     const reply = await runAgent(data.messages, data.locale);
-    // Persist transcript (best-effort).
-    createRecord("AgentConversations", {
-      sessionId: data.sessionId,
-      locale: data.locale,
-      transcript: JSON.stringify([...data.messages, { role: "assistant", content: reply }]),
-      createdAt: new Date().toISOString(),
-    }).catch(() => {});
+    // Hold the conversation in memory; it is emailed as one transcript once the
+    // person stops typing, rather than a message at a time.
+    recordTurn(data.sessionId, data.locale, data.messages, reply);
     return NextResponse.json({ ok: true, reply });
   } catch (err) {
     console.error("[agent] failed", err);

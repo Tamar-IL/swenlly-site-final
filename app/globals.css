@@ -342,18 +342,67 @@ footer img.logo{height:28px;opacity:.9}
 /* real screenshots of a delivered system */
 .shotgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 .shot{margin:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;
- background:var(--card2);transition:border-color .2s,transform .2s}
+ background:var(--card2);transition:border-color .2s,transform .2s;
+ display:flex;flex-direction:column}
 .shot:hover{border-color:var(--line2);transform:translateY(-2px)}
 .shot.wide{grid-column:1/-1}
-/* The screenshots are light UI on a dark page; a hairline keeps them from
-   bleeding into the card, and top alignment keeps the headers visible. */
-.shot img{display:block;width:100%;height:auto}
-/* Caption sits above the shot, so the rule belongs under it. */
+/* The two shots sharing a row are not quite the same shape, and their captions
+   wrap differently. Letting the image take the leftover height and crop from the
+   bottom keeps the pair flush, and cropping from the bottom keeps each screen's
+   header visible. A card alone on its row never stretches, so nothing is cropped
+   there or on mobile. */
+.shot img{display:block;width:100%;height:auto;flex:1 1 auto;min-height:0;
+ object-fit:cover;object-position:top}
+/* Caption sits above the shot, so the rule belongs under it. It must not give up
+   height to the image. */
 .shot figcaption{padding:13px 16px;display:flex;flex-direction:column;gap:3px;
- border-bottom:1px solid var(--line)}
+ border-bottom:1px solid var(--line);flex:none}
 .shot-c{font-family:var(--sans);font-weight:700;font-size:13.5px;color:var(--tx)}
 .shot-s{font-family:var(--sans);font-size:12.5px;line-height:1.65;color:var(--tx3)}
 @media(max-width:720px){.shotgrid{grid-template-columns:1fr}}
+
+/* real forms we built, one at a time */
+/* Centred rather than full-bleed: these are phone-shaped, and a screenshot that
+   narrow stranded against a 1160px column reads as an afterthought. */
+.fcar{max-width:620px;margin:2px auto 0}
+.fcar-cap{display:flex;flex-direction:column;gap:4px;min-height:64px;margin-bottom:14px;
+ text-align:center;align-items:center}
+.fcar-stage{display:flex;align-items:center;justify-content:center;gap:14px}
+/* Source order is frame, prev, next — see the component. */
+.fcar-nav.is-prev{order:-1}
+/* The frame is the fixed thing, not the image: the five screenshots are close in
+   shape but not identical, and a stage that resized on every click would shove
+   the dots and the next section up and down the page. 9/16 is the middle of
+   what they are, so the letterboxing is a few pixels either way. */
+.fcar-frame{position:relative;flex:none;height:clamp(420px,56vh,580px);aspect-ratio:9/16;
+ border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--card2);
+ box-shadow:0 22px 50px -30px rgba(0,0,0,.9)}
+.fcar-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+ opacity:0;transition:opacity .28s ease}
+.fcar-img.on{opacity:1}
+.fcar-nav{flex:none;width:42px;height:42px;border-radius:999px;cursor:pointer;
+ display:grid;place-items:center;background:var(--card2);color:var(--tx2);
+ border:1px solid var(--line);transition:border-color .2s,color .2s,background .2s}
+.fcar-nav:hover{border-color:var(--line2);color:var(--tx);background:var(--card)}
+.fcar-nav:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.fcar-foot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;
+ flex-wrap:wrap}
+.fcar-dots{display:flex;gap:7px}
+.fcar-dot{width:8px;height:8px;padding:0;border-radius:999px;cursor:pointer;
+ background:var(--line2);border:0;transition:background .2s,transform .2s}
+.fcar-dot:hover{transform:scale(1.25)}
+.fcar-dot.on{background:var(--green)}
+.fcar-dot:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+.fcar-hint{font-family:var(--sans);font-size:12px;color:var(--tx3)}
+@media(max-width:560px){
+ /* No room for arrows beside the shot here — swipe and the dots carry it too. Dropping out of flex entirely puts
+    the frame on its own line and the two arrows, centred, on the next one —
+    which is what the source order already says. */
+ .fcar-stage{display:block;text-align:center}
+ .fcar-frame{height:auto;width:min(100%,340px);margin-inline:auto}
+ .fcar-nav{display:inline-grid;margin:14px 7px 0}
+}
+@media(prefers-reduced-motion:reduce){.fcar-img{transition:none}}
 
 /* real client build showcase */
 .svcvideo{display:block;width:100%;aspect-ratio:16/9;background:#000;

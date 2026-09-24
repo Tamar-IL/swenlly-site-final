@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ensureReminderLoop } from "@/lib/reminders";
 import { hebcalStatus } from "@/lib/hebcal";
+import { ensureTranscriptLoop, transcriptStatus } from "@/lib/agent-transcripts";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ export function GET() {
   // means meetings booked before the restart still get their hour-before email,
   // even if nobody visits the site in between. It is idempotent.
   ensureReminderLoop();
+  // Same reasoning for the transcript sweep: a conversation that ended just
+  // before a quiet spell still gets emailed.
+  ensureTranscriptLoop();
 
   const provider = (process.env.LLM_PROVIDER || "anthropic").toLowerCase().trim();
   const usingOpenAI = ["openai", "gpt", "chatgpt"].includes(provider);
@@ -69,6 +73,9 @@ export function GET() {
       keyPresent: usingOpenAI
         ? !!process.env.OPENAI_API_KEY
         : !!process.env.ANTHROPIC_API_KEY,
+      // Conversations held in memory, waiting to go quiet before they are
+      // emailed. A number that only ever grows means the sweep is not running.
+      transcripts: transcriptStatus(),
     },
   });
 }

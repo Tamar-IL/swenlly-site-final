@@ -3,6 +3,7 @@ import { getContent } from "@/lib/content";
 import { PageIntro, CtaBlock } from "@/components/sections/Bits";
 import { ServiceMock } from "@/components/ui/ProductUI";
 import { JsonLd } from "@/components/JsonLd";
+import { FormCarousel } from "@/components/FormCarousel";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -88,7 +89,13 @@ export default async function ServicesPage({
                 <div className="svclabel">{s.crmShots.label}</div>
                 <div className="shotgrid">
                   {s.crmShots.items.map((shot, i) => (
-                    <figure className={`shot${i === 0 ? " wide" : ""}`} key={shot.src}>
+                    // The last shot spans the row: the two above it are nearly
+                    // square and read fine at half width, the orders list is
+                    // wide and would shrink to nothing beside them.
+                    <figure
+                      className={`shot${i === s.crmShots.items.length - 1 ? " wide" : ""}`}
+                      key={shot.src}
+                    >
                       {/* Caption first: it says what to look at, which is only
                           useful before the eye lands on the screenshot. */}
                       <figcaption>
@@ -104,6 +111,20 @@ export default async function ServicesPage({
                     </figure>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Forms are phone-shaped and each one wears a different client's
+                branding, so they get a frame each rather than a grid. */}
+            {item.id === "forms" && (
+              <div className="svcwhat">
+                <div className="svclabel">{s.formShots.label}</div>
+                <FormCarousel
+                  items={s.formShots.items}
+                  prev={s.formShots.prev}
+                  next={s.formShots.next}
+                  hint={s.formShots.hint}
+                />
               </div>
             )}
 
