@@ -3,6 +3,7 @@
 import type { Booking } from "./bookings-store";
 import { buildIcs } from "./ics";
 import { SLOT_MINUTES } from "./availability";
+import { formatSlot } from "./time";
 
 const SITE = process.env.SITE_URL || "https://swenlly.com";
 
@@ -320,4 +321,74 @@ export async function sendCancelled(b: Booking): Promise<boolean> {
   });
   const [a, c] = await Promise.all([client, owner]);
   return a || c;
+}
+
+// ── Agent transcripts ────────────────────────────────────────────────────────
+
+/**
+ * One conversation with the site's agent, sent to the inbox once the person
+ * stops typing.
+ *
+ * Laid out as bubbles rather than a `role: content` dump: these get read while
+ * deciding whether to call someone back, and who said what has to be obvious at
+ * a glance. Visitor bubbles sit on the reading edge, the agent's on the other,
+ * the same way round as the widget on the site.
+ */
+export function sendAgentTranscript(t: {
+  sessionId: string;
+  locale: string;
+  turns: { role: "user" | "assistant"; content: string }[];
+  startedAt: number;
+  lastAt: number;
+}): Promise<boolean> {
+  // Always in Hebrew: the recipient is us, whatever language the visitor chose.
+  // Which language they chose is itself worth knowing, so it gets a row.
+  const started = formatSlot(new Date(t.startedAt), "he");
+  const minutes = Math.max(1, Math.round((t.lastAt - t.startedAt) / 60000));
+  const asked = t.turns.filter((m) => m.role === "user").length;
+
+  const bubbles = t.turns
+    .map((m) => {
+      const visitor = m.role === "user";
+      const who = visitor ? "המבקר/ת" : "הסוכן";
+      // A visitor bubble is the one worth reading twice, so it gets the ink.
+      const bg = visitor ? INK : WASH;
+      const fg = visitor ? "#ffffff" : TEXT;
+      const border = visitor ? INK : LINE;
+      const align = visitor ? "right" : "left";
+      // Newlines are the only formatting the chat carries through.
+      const text = esc(m.content).replace(/\n/g, "<br>");
+      return `<tr><td align="${align}" style="padding:5px 0">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:420px">
+          <tr><td style="padding:0 2px 3px;font-size:11px;color:${MUTED}" align="${align}">${who}</td></tr>
+          <tr><td dir="auto" style="background:${bg};color:${fg};border:1px solid ${border};border-radius:14px;padding:11px 14px;font-size:14px;line-height:1.7">${text}</td></tr>
+        </table>
+      </td></tr>`;
+    })
+    .join("");
+
+  const length =
+    `${minutes === 1 ? "דקה" : `${minutes} דקות`} · ` +
+    `${t.turns.length} הודעות`;
+
+  const meta = `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;border-top:1px solid ${LINE};border-bottom:1px solid ${LINE};margin:0 0 16px">
+    ${row("התחילה", started)}
+    ${row("אורך", length)}
+    ${row("שפה", t.locale === "en" ? "אנגלית" : "עברית")}
+    ${row("מזהה שיחה", t.sessionId)}
+  </table>`;
+
+  return send({
+    from: FROM,
+    to: NOTIFY,
+    reply_to: REPLY_TO,
+    subject: `שיחה עם הסוכן באתר · ${asked} ${asked === 1 ? "שאלה" : "שאלות"}`,
+    html: shell(
+      "שיחה עם הסוכן באתר",
+      meta +
+        `<table role="presentation" cellpadding="0" cellspacing="0" width="100%">${bubbles}</table>` +
+        `<p style="margin:18px 0 0;font-size:12px;line-height:1.7;color:${MUTED}">נשלח אחרי שהשיחה נרגעה. פרטי קשר מופיעים כאן רק אם המבקר/ת הקלידו אותם.</p>`,
+      t.turns.find((m) => m.role === "user")?.content.slice(0, 120) || ""
+    ),
+  });
 }

@@ -88,7 +88,13 @@ export default async function ServicesPage({
                 <div className="svclabel">{s.crmShots.label}</div>
                 <div className="shotgrid">
                   {s.crmShots.items.map((shot, i) => (
-                    <figure className={`shot${i === 0 ? " wide" : ""}`} key={shot.src}>
+                    // The last shot spans the row: the two above it are nearly
+                    // square and read fine at half width, the orders list is
+                    // wide and would shrink to nothing beside them.
+                    <figure
+                      className={`shot${i === s.crmShots.items.length - 1 ? " wide" : ""}`}
+                      key={shot.src}
+                    >
                       {/* Caption first: it says what to look at, which is only
                           useful before the eye lands on the screenshot. */}
                       <figcaption>
