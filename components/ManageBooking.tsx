@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useContent } from "./ContentProvider";
-import { SlotCalendar, type Day } from "./SlotCalendar";
+import { SlotCalendar, type Day, type Slot } from "./SlotCalendar";
 
 type Meeting = {
   slotISO: string;
@@ -59,7 +59,14 @@ export function ManageBooking() {
         }
         setMeeting(data.booking);
         setDays(data.days || []);
-        if (data.days?.length) setDayKey(data.days[0].day);
+        // Open on the day the meeting is actually on, not the first free one —
+        // otherwise the visitor has to hunt for where it currently stands, and
+        // the "current time" marker is on a day nobody is looking at.
+        const own = (data.days || []).find((d: Day) =>
+          d.slots.some((sl: Slot) => sl.iso === data.booking.slotISO)
+        );
+        if (own) setDayKey(own.day);
+        else if (data.days?.length) setDayKey(data.days[0].day);
         setScreen("ready");
       } catch {
         if (alive) {
@@ -183,12 +190,14 @@ export function ManageBooking() {
                 slotSelected={slot}
                 onSelectSlot={setSlot}
                 locale={locale}
+                currentSlot={meeting?.slotISO}
                 labels={{
                   day: cal.day,
                   time: cal.time,
                   noSlots: cal.empty,
                   prev: cal.prev,
                   next: cal.next,
+                  current: m.currentSlot,
                 }}
               />
               {days.length > 0 && (
