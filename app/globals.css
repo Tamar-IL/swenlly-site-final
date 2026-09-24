@@ -347,8 +347,10 @@ footer img.logo{height:28px;opacity:.9}
 .shot.wide{grid-column:1/-1}
 /* The screenshots are light UI on a dark page; a hairline keeps them from
    bleeding into the card, and top alignment keeps the headers visible. */
-.shot img{display:block;width:100%;height:auto;border-bottom:1px solid var(--line)}
-.shot figcaption{padding:13px 16px;display:flex;flex-direction:column;gap:3px}
+.shot img{display:block;width:100%;height:auto}
+/* Caption sits above the shot, so the rule belongs under it. */
+.shot figcaption{padding:13px 16px;display:flex;flex-direction:column;gap:3px;
+ border-bottom:1px solid var(--line)}
 .shot-c{font-family:var(--sans);font-weight:700;font-size:13.5px;color:var(--tx)}
 .shot-s{font-family:var(--sans);font-size:12.5px;line-height:1.65;color:var(--tx3)}
 @media(max-width:720px){.shotgrid{grid-template-columns:1fr}}

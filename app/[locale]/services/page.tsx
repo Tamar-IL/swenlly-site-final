@@ -89,16 +89,18 @@ export default async function ServicesPage({
                 <div className="shotgrid">
                   {s.crmShots.items.map((shot, i) => (
                     <figure className={`shot${i === 0 ? " wide" : ""}`} key={shot.src}>
+                      {/* Caption first: it says what to look at, which is only
+                          useful before the eye lands on the screenshot. */}
+                      <figcaption>
+                        <span className="shot-c">{shot.cap}</span>
+                        <span className="shot-s">{shot.sub}</span>
+                      </figcaption>
                       <img
                         src={shot.src}
                         alt={shot.cap}
                         loading="lazy"
                         decoding="async"
                       />
-                      <figcaption>
-                        <span className="shot-c">{shot.cap}</span>
-                        <span className="shot-s">{shot.sub}</span>
-                      </figcaption>
                     </figure>
                   ))}
                 </div>
