@@ -3,6 +3,7 @@ import { getContent } from "@/lib/content";
 import { PageIntro, CtaBlock } from "@/components/sections/Bits";
 import { ServiceMock } from "@/components/ui/ProductUI";
 import { JsonLd } from "@/components/JsonLd";
+import { FormCarousel } from "@/components/FormCarousel";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -110,6 +111,20 @@ export default async function ServicesPage({
                     </figure>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Forms are phone-shaped and each one wears a different client's
+                branding, so they get a frame each rather than a grid. */}
+            {item.id === "forms" && (
+              <div className="svcwhat">
+                <div className="svclabel">{s.formShots.label}</div>
+                <FormCarousel
+                  items={s.formShots.items}
+                  prev={s.formShots.prev}
+                  next={s.formShots.next}
+                  hint={s.formShots.hint}
+                />
               </div>
             )}
 
