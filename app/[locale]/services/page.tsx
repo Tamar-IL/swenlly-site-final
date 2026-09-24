@@ -79,6 +79,32 @@ export default async function ServicesPage({
               </div>
             )}
 
+            {/* CRM shows real screenshots of a system we delivered, the same way
+                the flagship shows its video. Client columns are blurred in the
+                source, and the client-list shot is cropped above the row that
+                held a name and a phone number. */}
+            {item.id === "crm" && (
+              <div className="svcwhat">
+                <div className="svclabel">{s.crmShots.label}</div>
+                <div className="shotgrid">
+                  {s.crmShots.items.map((shot, i) => (
+                    <figure className={`shot${i === 0 ? " wide" : ""}`} key={shot.src}>
+                      <img
+                        src={shot.src}
+                        alt={shot.cap}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <figcaption>
+                        <span className="shot-c">{shot.cap}</span>
+                        <span className="shot-s">{shot.sub}</span>
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {tiers.length > 0 && (
               <div className="svcwhat">
                 <div className="svclabel">מה זה כולל</div>

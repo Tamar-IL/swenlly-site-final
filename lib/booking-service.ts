@@ -196,7 +196,9 @@ export async function cancelBooking(token: string, locale = "he"): Promise<Booki
   // The slot is free the moment the store says so; the calendar and the emails
   // are catching up, and neither failing should undo the cancellation.
   if (cancelled.googleEventId) await deleteEvent(cancelled.googleEventId);
-  await sendCancelled(cancelled);
+  if (!(await sendCancelled(cancelled))) {
+    console.error("[booking] cancellation emails failed", { id: cancelled.id, to: cancelled.email });
+  }
   return { ok: true, booking: cancelled };
 }
 
@@ -223,7 +225,18 @@ export async function rescheduleBooking(
 
   const slot = new Date(newSlotISO);
   if (!Number.isFinite(slot.getTime())) return invalid(locale);
-  if (slot.toISOString() === booking.slotISO) return { ok: true, booking };
+  if (slot.toISOString() === booking.slotISO) {
+    // Used to return ok and do nothing: no move, no email, and a page that said
+    // "updated". Saying so is the only honest answer — nothing happened.
+    return {
+      ok: false,
+      reason: "same-slot",
+      error:
+        locale === "en"
+          ? "That is the meeting's current time. Pick a different one to move it."
+          : "זה המועד הנוכחי של הפגישה. כדי להזיז אותה, צריך לבחור מועד אחר.",
+    };
+  }
 
   // Only the new slot needs protecting: releasing the old one cannot collide
   // with anything, so one lock — on the day being taken — is enough.
@@ -254,7 +267,9 @@ export async function rescheduleBooking(
       if (!ok) console.error("[booking] calendar event not moved", { id: moved.id });
     }
 
-    await sendRescheduled(moved);
+    if (!(await sendRescheduled(moved))) {
+      console.error("[booking] reschedule emails failed", { id: moved.id, to: moved.email });
+    }
     ensureReminderLoop();
     return { ok: true, booking: moved };
   });

@@ -40,6 +40,7 @@ export function SlotCalendar({
   onSelectSlot,
   locale,
   labels,
+  currentSlot,
 }: {
   days: Day[];
   daySelected: string;
@@ -47,7 +48,11 @@ export function SlotCalendar({
   slotSelected: string;
   onSelectSlot: (iso: string) => void;
   locale: string;
-  labels: { day: string; time: string; noSlots: string; prev: string; next: string };
+  labels: { day: string; time: string; noSlots: string; prev: string; next: string; current?: string };
+  /** When rescheduling, the slot the meeting is already on. Shown as where it
+   *  stands rather than as something to pick — choosing it changes nothing, and
+   *  offering it as a normal option made "moving" a meeting a silent no-op. */
+  currentSlot?: string;
 }) {
   const open = useMemo(() => new Map(days.map((d) => [d.day, d])), [days]);
   const months = useMemo(() => {
@@ -152,17 +157,24 @@ export function SlotCalendar({
             {labels.time} · {picked.label}
           </label>
           <div className="chiprow" id="cal-times" role="group" aria-label={labels.time}>
-            {picked.slots.map((s) => (
-              <button
-                key={s.iso}
-                type="button"
-                className={`chip ${s.iso === slotSelected ? "on" : ""}`}
-                aria-pressed={s.iso === slotSelected}
-                onClick={() => onSelectSlot(s.iso)}
-              >
-                {s.time}
-              </button>
-            ))}
+            {picked.slots.map((s) => {
+              const isCurrent = !!currentSlot && s.iso === currentSlot;
+              return (
+                <button
+                  key={s.iso}
+                  type="button"
+                  className={`chip ${s.iso === slotSelected ? "on" : ""} ${isCurrent ? "current" : ""}`}
+                  aria-pressed={s.iso === slotSelected}
+                  aria-current={isCurrent || undefined}
+                  disabled={isCurrent}
+                  title={isCurrent ? labels.current : undefined}
+                  onClick={() => onSelectSlot(s.iso)}
+                >
+                  {s.time}
+                  {isCurrent && labels.current && <span className="chip-tag">{labels.current}</span>}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
